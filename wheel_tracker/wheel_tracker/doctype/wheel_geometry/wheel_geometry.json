@@ -1,0 +1,62 @@
+{
+ "actions": [],
+ "autoname": "field:geometry_name",
+ "creation": "2026-08-16 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "geometry_name",
+  "requires_correction_factor",
+  "description"
+ ],
+ "fields": [
+  {
+   "fieldname": "geometry_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Wheel Geometry",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "0",
+   "description": "Checked for profiled/angled shapes whose abrasive band is a taper/bevel rather than a straight annulus — the volume formula switches to the exact conical-frustum-ring calculation, driven by each Wheel Type's Angle. Left unchecked for flat/straight shapes, where the exact annulus formula applies directly.",
+   "fieldname": "requires_correction_factor",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Requires Correction Factor"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  }
+ ],
+ "links": [],
+ "modified": "2026-08-16 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Wheel Tracker",
+ "name": "Wheel Geometry",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Stock User"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

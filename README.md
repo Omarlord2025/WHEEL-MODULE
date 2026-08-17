@@ -1,4 +1,4 @@
-### Stone Tracker
+### Wheel Tracker
 
 Diamond/CBN resharpening wheel tracking, wear cost allocation, and reorder alerts for CNC Leaders
 
@@ -9,7 +9,7 @@ You can install this app using the [bench](https://github.com/frappe/bench) CLI:
 ```bash
 cd $PATH_TO_YOUR_BENCH
 bench get-app $URL_OF_THIS_REPO --branch develop
-bench install-app stone_tracker
+bench install-app wheel_tracker
 ```
 
 ### Contributing
@@ -17,7 +17,7 @@ bench install-app stone_tracker
 This app uses `pre-commit` for code formatting and linting. Please [install pre-commit](https://pre-commit.com/#installation) and enable it for this repository:
 
 ```bash
-cd apps/stone_tracker
+cd apps/wheel_tracker
 pre-commit install
 ```
 

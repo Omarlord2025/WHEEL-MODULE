@@ -1,0 +1,20 @@
+{
+ "creation": "2026-08-16 00:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Number Card",
+ "document_type": "Wheel",
+ "filters_json": "[[\"Wheel\",\"status\",\"!=\",\"Retired\"],[\"Wheel\",\"consumption_percent\",\">=\",80]]",
+ "function": "Count",
+ "idx": 0,
+ "is_public": 1,
+ "is_standard": 1,
+ "label": "Wheels Nearing Retirement (>=80%)",
+ "modified": "2026-08-16 19:35:00.000000",
+ "modified_by": "Administrator",
+ "module": "Wheel Tracker",
+ "name": "Wheels Nearing Retirement",
+ "owner": "Administrator",
+ "show_percentage_stats": 0,
+ "stats_time_interval": "Daily",
+ "type": "Document Type"
+}

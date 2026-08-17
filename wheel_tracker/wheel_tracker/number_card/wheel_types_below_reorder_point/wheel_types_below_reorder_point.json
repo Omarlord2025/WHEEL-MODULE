@@ -1,0 +1,20 @@
+{
+ "creation": "2026-08-16 00:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Number Card",
+ "document_type": "Wheel Type",
+ "filters_json": "[[\"Wheel Type\",\"reorder_alert_active\",\"=\",1]]",
+ "function": "Count",
+ "idx": 0,
+ "is_public": 1,
+ "is_standard": 1,
+ "label": "Wheel Types Below Reorder Point",
+ "modified": "2026-08-16 19:35:00.000000",
+ "modified_by": "Administrator",
+ "module": "Wheel Tracker",
+ "name": "Wheel Types Below Reorder Point",
+ "owner": "Administrator",
+ "show_percentage_stats": 0,
+ "stats_time_interval": "Daily",
+ "type": "Document Type"
+}

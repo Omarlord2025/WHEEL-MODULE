@@ -1,0 +1,237 @@
+{
+ "charts": [],
+ "content": "[{\"id\": \"stwsHdr1\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\", \"col\": 12}}, {\"id\": \"stwsSc01\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Wheel Type\", \"col\": 3}}, {\"id\": \"stwsSc02\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Wheel\", \"col\": 3}}, {\"id\": \"stwsSc03\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Measurement Event\", \"col\": 3}}, {\"id\": \"stwsSc04\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Wheel Tracker Settings\", \"col\": 3}}, {\"id\": \"stwsSp01\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"stwsHdr2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Overview</b></span>\", \"col\": 12}}, {\"id\": \"stwsNc01\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Wheels In Stock\", \"col\": 3}}, {\"id\": \"stwsNc02\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Wheels In Use\", \"col\": 3}}, {\"id\": \"stwsNc03\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Wheels Nearing Retirement\", \"col\": 3}}, {\"id\": \"stwsNc04\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Wheel Types Below Reorder Point\", \"col\": 3}}, {\"id\": \"stwsSp02\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"stwsHdr3\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Masters & Operations</b></span>\", \"col\": 12}}, {\"id\": \"stwsCd01\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 3}}, {\"id\": \"stwsCd04\", \"type\": \"card\", \"data\": {\"card_name\": \"Classification\", \"col\": 3}}, {\"id\": \"stwsCd02\", \"type\": \"card\", \"data\": {\"card_name\": \"Operations\", \"col\": 3}}, {\"id\": \"stwsCd03\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 3}}]",
+ "creation": "2026-08-16 00:00:00",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "tool",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Wheel Tracker",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Masters",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Wheel Type",
+   "link_count": 0,
+   "link_to": "Wheel Type",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Wheel Tracker Settings",
+   "link_count": 0,
+   "link_to": "Wheel Tracker Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Classification",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Wheel Shape",
+   "link_count": 0,
+   "link_to": "Wheel Shape",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Wheel Geometry",
+   "link_count": 0,
+   "link_to": "Wheel Geometry",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Wheel Material",
+   "link_count": 0,
+   "link_to": "Wheel Material",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Wheel Grit",
+   "link_count": 0,
+   "link_to": "Wheel Grit",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Wheel Concentration",
+   "link_count": 0,
+   "link_to": "Wheel Concentration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Wheel Bond",
+   "link_count": 0,
+   "link_to": "Wheel Bond",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Operations",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Wheel",
+   "link_count": 0,
+   "link_to": "Wheel",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Measurement Event",
+   "link_count": 0,
+   "link_to": "Measurement Event",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Bulk Import Wheels",
+   "link_count": 0,
+   "link_to": "wheel-bulk-import",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reports",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 1,
+   "label": "Wheel Cost Summary",
+   "link_count": 0,
+   "link_to": "Wheel Cost Summary",
+   "link_type": "Report",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-08-17 12:46:47.181670",
+ "modified_by": "Administrator",
+ "module": "Wheel Tracker",
+ "name": "Wheel Tracker",
+ "number_cards": [
+  {
+   "label": "Wheels In Stock",
+   "number_card_name": "Wheels In Stock"
+  },
+  {
+   "label": "Wheels In Use",
+   "number_card_name": "Wheels In Use"
+  },
+  {
+   "label": "Wheels Nearing Retirement",
+   "number_card_name": "Wheels Nearing Retirement"
+  },
+  {
+   "label": "Wheel Types Below Reorder Point",
+   "number_card_name": "Wheel Types Below Reorder Point"
+  }
+ ],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "restrict_to_domain": "",
+ "roles": [],
+ "sequence_id": 1.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "label": "Wheel Type",
+   "link_to": "Wheel Type",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "label": "Wheel",
+   "link_to": "Wheel",
+   "stats_filter": "{\"status\": \"In Stock\"}",
+   "type": "DocType"
+  },
+  {
+   "color": "Yellow",
+   "label": "Measurement Event",
+   "link_to": "Measurement Event",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "label": "Wheel Tracker Settings",
+   "link_to": "Wheel Tracker Settings",
+   "type": "DocType"
+  }
+ ],
+ "title": "Wheel Tracker"
+}

@@ -1,0 +1,250 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-08-16 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "wheel",
+  "wheel_type",
+  "job_card",
+  "column_break_head",
+  "measurement_date",
+  "measured_by",
+  "section_break_readings",
+  "diameter",
+  "inner_diameter",
+  "diamond_height",
+  "column_break_readings",
+  "confirmed_volume",
+  "section_break_wear",
+  "usable_volume",
+  "consumed_volume",
+  "consumption_percent",
+  "column_break_wear",
+  "previous_consumed_volume",
+  "incremental_consumed_volume",
+  "section_break_cost",
+  "cost_per_mm3",
+  "job_cost",
+  "triggered_retirement",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "ME-.YYYY.-.#####",
+   "reqd": 1
+  },
+  {
+   "fieldname": "wheel",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Wheel",
+   "options": "Wheel",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "wheel.wheel_type",
+   "fieldname": "wheel_type",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Wheel Type",
+   "options": "Wheel Type",
+   "read_only": 1
+  },
+  {
+   "fieldname": "job_card",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Job Card",
+   "options": "Job Card"
+  },
+  {
+   "fieldname": "column_break_head",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Now",
+   "fieldname": "measurement_date",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Measurement Date",
+   "reqd": 1
+  },
+  {
+   "default": "__user",
+   "fieldname": "measured_by",
+   "fieldtype": "Link",
+   "label": "Measured By",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_readings",
+   "fieldtype": "Section Break",
+   "label": "Caliper Readings"
+  },
+  {
+   "fieldname": "diameter",
+   "fieldtype": "Float",
+   "label": "Diameter (mm)",
+   "precision": "3",
+   "reqd": 1
+  },
+  {
+   "fieldname": "inner_diameter",
+   "fieldtype": "Float",
+   "label": "Inner Diameter (mm)",
+   "precision": "3",
+   "reqd": 1
+  },
+  {
+   "fieldname": "diamond_height",
+   "fieldtype": "Float",
+   "label": "Diamond Layer Height (mm)",
+   "precision": "3",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_readings",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Computed automatically from the Diameter reading above, holding Inner Diameter/Diamond Layer Height/Angle at the Wheel Type's constant original values (see PRD v6). This is the value used for all wear and cost calculations.",
+   "fieldname": "confirmed_volume",
+   "fieldtype": "Float",
+   "label": "Confirmed Volume (mm\u00b3)",
+   "precision": "3",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_wear",
+   "fieldtype": "Section Break",
+   "label": "Wear Calculation"
+  },
+  {
+   "fieldname": "usable_volume",
+   "fieldtype": "Float",
+   "label": "Usable Current Volume (mm\u00b3)",
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "fieldname": "consumed_volume",
+   "fieldtype": "Float",
+   "label": "Consumed Volume (mm\u00b3, cumulative)",
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "fieldname": "consumption_percent",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Consumption %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_wear",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "previous_consumed_volume",
+   "fieldtype": "Float",
+   "label": "Previous Consumed Volume (mm\u00b3)",
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "description": "Consumed Volume at this measurement minus Consumed Volume at the previous one for this Wheel.",
+   "fieldname": "incremental_consumed_volume",
+   "fieldtype": "Float",
+   "label": "Incremental Consumed Volume (mm\u00b3)",
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_cost",
+   "fieldtype": "Section Break",
+   "label": "Cost"
+  },
+  {
+   "description": "Wheel Type's Cost per mm\u00b3 at the time of this measurement.",
+   "fieldname": "cost_per_mm3",
+   "fieldtype": "Currency",
+   "label": "Cost per mm\u00b3 (usable)",
+   "precision": "4",
+   "read_only": 1
+  },
+  {
+   "description": "Incremental Consumed Volume x Cost per mm\u00b3. Rolled up to the linked Job Card on submit.",
+   "fieldname": "job_cost",
+   "fieldtype": "Currency",
+   "label": "Job Cost",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "triggered_retirement",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Triggered Retirement",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Measurement Event",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-08-16 18:28:49.723439",
+ "modified_by": "Administrator",
+ "module": "Wheel Tracker",
+ "name": "Measurement Event",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Stock User",
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "measurement_date",
+ "sort_order": "DESC",
+ "states": []
+}

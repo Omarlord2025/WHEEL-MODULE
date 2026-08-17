@@ -1,0 +1,59 @@
+{
+ "actions": [],
+ "creation": "2026-08-16 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "reorder_notify_role",
+  "send_email_alerts",
+  "column_break_1",
+  "usable_volume_floor_percent"
+ ],
+ "fields": [
+  {
+   "default": "Stock Manager",
+   "description": "Role notified when a Wheel Type's in-stock count drops below its reorder point.",
+   "fieldname": "reorder_notify_role",
+   "fieldtype": "Link",
+   "label": "Reorder Notify Role",
+   "options": "Role",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "send_email_alerts",
+   "fieldtype": "Check",
+   "label": "Also Send Email Alerts"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "10",
+   "description": "Percentage of a wheel's diamond-layer volume that is never counted as usable (matches the 'minus 10%' columns in the legacy spreadsheet).",
+   "fieldname": "usable_volume_floor_percent",
+   "fieldtype": "Percent",
+   "label": "Usable Volume Floor %",
+   "reqd": 1
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-08-16 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Wheel Tracker",
+ "name": "Wheel Tracker Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

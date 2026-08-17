@@ -1,0 +1,227 @@
+{
+ "actions": [],
+ "creation": "2026-08-16 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "factory_wheel_code",
+  "wheel_type",
+  "status",
+  "column_break_head",
+  "warehouse",
+  "received_on",
+  "section_break_dims",
+  "current_diameter",
+  "current_inner_diameter",
+  "current_diamond_height",
+  "column_break_dims",
+  "current_volume",
+  "usable_current_volume",
+  "consumed_volume",
+  "consumption_percent",
+  "section_break_trace",
+  "source_stock_entry",
+  "column_break_trace",
+  "current_job_card",
+  "section_break_retire",
+  "retirement_date",
+  "column_break_retire",
+  "retirement_reason",
+  "section_break_cost",
+  "total_cost_allocated"
+ ],
+ "fields": [
+  {
+   "description": "Unique physical wheel identifier, e.g. SH-D-12V9-100-T20-0063. Auto-generated if left blank.",
+   "fieldname": "factory_wheel_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Factory Wheel Code",
+   "unique": 1
+  },
+  {
+   "fieldname": "wheel_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Wheel Type",
+   "options": "Wheel Type",
+   "reqd": 1
+  },
+  {
+   "default": "In Stock",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "In Stock\nIn Use\nRetired",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_head",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "warehouse",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "default": "Today",
+   "fieldname": "received_on",
+   "fieldtype": "Date",
+   "label": "Received On"
+  },
+  {
+   "fieldname": "section_break_dims",
+   "fieldtype": "Section Break",
+   "label": "Current Dimensions"
+  },
+  {
+   "fieldname": "current_diameter",
+   "fieldtype": "Float",
+   "label": "Current Diameter (mm)",
+   "precision": "3",
+   "reqd": 1
+  },
+  {
+   "fieldname": "current_inner_diameter",
+   "fieldtype": "Float",
+   "label": "Current Inner Diameter (mm)",
+   "precision": "3",
+   "reqd": 1
+  },
+  {
+   "fieldname": "current_diamond_height",
+   "fieldtype": "Float",
+   "label": "Current Diamond Layer Height (mm)",
+   "precision": "3",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_dims",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Set from the latest Measurement Event's Confirmed Volume, computed automatically from its diameter reading (see Wheel Type / PRD v6).",
+   "fieldname": "current_volume",
+   "fieldtype": "Float",
+   "label": "Current Volume (mm\u00b3)",
+   "precision": "3",
+   "reqd": 1
+  },
+  {
+   "fieldname": "usable_current_volume",
+   "fieldtype": "Float",
+   "label": "Usable Current Volume (mm\u00b3)",
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "fieldname": "consumed_volume",
+   "fieldtype": "Float",
+   "label": "Consumed Volume (mm\u00b3)",
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "fieldname": "consumption_percent",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Consumption %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_trace",
+   "fieldtype": "Section Break",
+   "label": "Traceability"
+  },
+  {
+   "description": "Material Receipt Stock Entry this Wheel was created from, if any.",
+   "fieldname": "source_stock_entry",
+   "fieldtype": "Link",
+   "label": "Source Stock Entry",
+   "options": "Stock Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_trace",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Set while Status = In Use.",
+   "fieldname": "current_job_card",
+   "fieldtype": "Link",
+   "label": "Current Job Card",
+   "options": "Job Card",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_retire",
+   "fieldtype": "Section Break",
+   "label": "Retirement"
+  },
+  {
+   "fieldname": "retirement_date",
+   "fieldtype": "Date",
+   "label": "Retirement Date",
+   "read_only_depends_on": "eval:doc.status!='Retired'"
+  },
+  {
+   "fieldname": "column_break_retire",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "retirement_reason",
+   "fieldtype": "Small Text",
+   "label": "Retirement Reason"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_cost",
+   "fieldtype": "Section Break",
+   "label": "Cost"
+  },
+  {
+   "description": "Sum of Job Cost across all Measurement Events logged against this Wheel.",
+   "fieldname": "total_cost_allocated",
+   "fieldtype": "Currency",
+   "label": "Total Cost Allocated",
+   "read_only": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-08-16 18:28:48.398613",
+ "modified_by": "Administrator",
+ "module": "Wheel Tracker",
+ "name": "Wheel",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Stock User",
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

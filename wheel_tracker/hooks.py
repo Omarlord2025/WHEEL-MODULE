@@ -1,5 +1,5 @@
-app_name = "stone_tracker"
-app_title = "Stone Tracker"
+app_name = "wheel_tracker"
+app_title = "Wheel Tracker"
 app_publisher = "Omar Sabry"
 app_description = "Diamond/CBN resharpening wheel tracking, wear cost allocation, and reorder alerts for CNC Leaders"
 app_email = "omarelgewily2011@gmail.com"
@@ -13,11 +13,11 @@ app_license = "mit"
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [
 # 	{
-# 		"name": "stone_tracker",
-# 		"logo": "/assets/stone_tracker/logo.png",
-# 		"title": "Stone Tracker",
-# 		"route": "/stone_tracker",
-# 		"has_permission": "stone_tracker.api.permission.has_app_permission"
+# 		"name": "wheel_tracker",
+# 		"logo": "/assets/wheel_tracker/logo.png",
+# 		"title": "Wheel Tracker",
+# 		"route": "/wheel_tracker",
+# 		"has_permission": "wheel_tracker.api.permission.has_app_permission"
 # 	}
 # ]
 
@@ -25,15 +25,15 @@ app_license = "mit"
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/stone_tracker/css/stone_tracker.css"
-# app_include_js = "/assets/stone_tracker/js/stone_tracker.js"
+# app_include_css = "/assets/wheel_tracker/css/wheel_tracker.css"
+# app_include_js = "/assets/wheel_tracker/js/wheel_tracker.js"
 
 # include js, css files in header of web template
-# web_include_css = "/assets/stone_tracker/css/stone_tracker.css"
-# web_include_js = "/assets/stone_tracker/js/stone_tracker.js"
+# web_include_css = "/assets/wheel_tracker/css/wheel_tracker.css"
+# web_include_js = "/assets/wheel_tracker/js/wheel_tracker.js"
 
 # include custom scss in every website theme (without file extension ".scss")
-# website_theme_scss = "stone_tracker/public/scss/website"
+# website_theme_scss = "wheel_tracker/public/scss/website"
 
 # include js, css files in header of web form
 # webform_include_js = {"doctype": "public/js/doctype.js"}
@@ -43,7 +43,7 @@ app_license = "mit"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
+doctype_js = {"Job Card": "public/js/job_card.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -51,7 +51,7 @@ app_license = "mit"
 # Svg Icons
 # ------------------
 # include app icons in desk
-# app_include_icons = "stone_tracker/public/icons.svg"
+# app_include_icons = "wheel_tracker/public/icons.svg"
 
 # Home Pages
 # ----------
@@ -75,43 +75,43 @@ app_license = "mit"
 
 # add methods and filters to jinja environment
 # jinja = {
-# 	"methods": "stone_tracker.utils.jinja_methods",
-# 	"filters": "stone_tracker.utils.jinja_filters"
+# 	"methods": "wheel_tracker.utils.jinja_methods",
+# 	"filters": "wheel_tracker.utils.jinja_filters"
 # }
 
 # Installation
 # ------------
 
-# before_install = "stone_tracker.install.before_install"
-# after_install = "stone_tracker.install.after_install"
+# before_install = "wheel_tracker.install.before_install"
+after_install = "wheel_tracker.install.after_install"
 
 # Uninstallation
 # ------------
 
-# before_uninstall = "stone_tracker.uninstall.before_uninstall"
-# after_uninstall = "stone_tracker.uninstall.after_uninstall"
+# before_uninstall = "wheel_tracker.uninstall.before_uninstall"
+# after_uninstall = "wheel_tracker.uninstall.after_uninstall"
 
 # Integration Setup
 # ------------------
 # To set up dependencies/integrations with other apps
 # Name of the app being installed is passed as an argument
 
-# before_app_install = "stone_tracker.utils.before_app_install"
-# after_app_install = "stone_tracker.utils.after_app_install"
+# before_app_install = "wheel_tracker.utils.before_app_install"
+# after_app_install = "wheel_tracker.utils.after_app_install"
 
 # Integration Cleanup
 # -------------------
 # To clean up dependencies/integrations with other apps
 # Name of the app being uninstalled is passed as an argument
 
-# before_app_uninstall = "stone_tracker.utils.before_app_uninstall"
-# after_app_uninstall = "stone_tracker.utils.after_app_uninstall"
+# before_app_uninstall = "wheel_tracker.utils.before_app_uninstall"
+# after_app_uninstall = "wheel_tracker.utils.after_app_uninstall"
 
 # Desk Notifications
 # ------------------
 # See frappe.core.notifications.get_notification_config
 
-# notification_config = "stone_tracker.notifications.get_notification_config"
+# notification_config = "wheel_tracker.notifications.get_notification_config"
 
 # Permissions
 # -----------
@@ -137,52 +137,43 @@ app_license = "mit"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"Stock Entry": {
+		"on_submit": "wheel_tracker.stock_entry_hooks.create_wheels_on_material_receipt",
+	},
+	"Job Card": {
+		"validate": "wheel_tracker.job_card_integration.validate_wheel_assignments",
+		"on_update": "wheel_tracker.job_card_integration.sync_wheel_assignments",
+		"on_trash": "wheel_tracker.job_card_integration.release_wheels_on_trash",
+	},
+}
 
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"stone_tracker.tasks.all"
-# 	],
-# 	"daily": [
-# 		"stone_tracker.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"stone_tracker.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"stone_tracker.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"stone_tracker.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"cron": {
+		"0 8 * * *": ["wheel_tracker.reorder_alerts.check_reorder_levels"],
+	},
+}
 
 # Testing
 # -------
 
-# before_tests = "stone_tracker.install.before_tests"
+# before_tests = "wheel_tracker.install.before_tests"
 
 # Overriding Methods
 # ------------------------------
 #
 # override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "stone_tracker.event.get_events"
+# 	"frappe.desk.doctype.event.event.get_events": "wheel_tracker.event.get_events"
 # }
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
 # along with any modifications made in other Frappe apps
 # override_doctype_dashboards = {
-# 	"Task": "stone_tracker.task.get_dashboard_data"
+# 	"Task": "wheel_tracker.task.get_dashboard_data"
 # }
 
 # exempt linked doctypes from being automatically cancelled
@@ -196,13 +187,13 @@ app_license = "mit"
 
 # Request Events
 # ----------------
-# before_request = ["stone_tracker.utils.before_request"]
-# after_request = ["stone_tracker.utils.after_request"]
+# before_request = ["wheel_tracker.utils.before_request"]
+# after_request = ["wheel_tracker.utils.after_request"]
 
 # Job Events
 # ----------
-# before_job = ["stone_tracker.utils.before_job"]
-# after_job = ["stone_tracker.utils.after_job"]
+# before_job = ["wheel_tracker.utils.before_job"]
+# after_job = ["wheel_tracker.utils.after_job"]
 
 # User Data Protection
 # --------------------
@@ -232,7 +223,7 @@ app_license = "mit"
 # --------------------------------
 
 # auth_hooks = [
-# 	"stone_tracker.auth.validate"
+# 	"wheel_tracker.auth.validate"
 # ]
 
 # Automatically update python controller files with type annotations for this app.
