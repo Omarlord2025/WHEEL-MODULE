@@ -1,6 +1,8 @@
 # Copyright (c) 2026, CNC Leaders and contributors
 # For license information, please see license.txt
 
+from types import SimpleNamespace
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -21,15 +23,17 @@ class MeasurementEvent(Document):
 			frappe.throw(_("Wheel {0} does not exist.").format(self.wheel))
 		wheel_type = frappe.get_cached_doc("Wheel Type", wheel_type_name)
 
-		# Only the outer diameter changes as a wheel wears (see PRD v6) — inner diameter,
-		# layer height, and angle stay at the Wheel Type's constant original values, same
-		# formula as original_volume.
+		if not wheel_type.requires_measurement:
+			frappe.throw(
+				_(
+					"{0} Wheels are tracked as usable/not-usable, not by caliper measurement "
+					"— use Wheel Usability Check instead."
+				).format(wheel_type.shape)
+			)
+
+		inner_diameter, height, segments = self._volume_inputs(wheel_type)
 		self.confirmed_volume = calculate_wheel_volume(
-			self.diameter,
-			wheel_type.original_inner_diameter,
-			wheel_type.original_diamond_height,
-			wheel_type.requires_correction_factor,
-			wheel_type.angle,
+			self.diameter, inner_diameter, height, wheel_type.requires_correction_factor, segments
 		)
 
 		usable_fraction = get_usable_volume_fraction()
@@ -46,8 +50,40 @@ class MeasurementEvent(Document):
 			flt(self.consumed_volume) - flt(self.previous_consumed_volume), 0
 		)
 
+		# "نسبة الخسارة" (loss ratio) in the formula reference — radial diameter loss, a
+		# simple caliper-only cross-check independent of the volume formula. See PRD v7.
+		self.radial_wear = (flt(wheel_type.original_diameter) - flt(self.diameter)) / 2
+
 		self.cost_per_mm3 = flt(wheel_type.cost_per_mm3)
 		self.job_cost = flt(self.incremental_consumed_volume) * self.cost_per_mm3
+
+	def _volume_inputs(self, wheel_type):
+		"""(inner_diameter, height, segments) to feed calculate_wheel_volume() alongside
+		this event's own `diameter` reading — differs by geometry family (see PRD v8,
+		validated against the real WHEELS WITH ANGLES data):
+
+		Flat wheels wear only radially — the bore and layer height don't move, so use the
+		Wheel Type's constant original values, not this event's own (redundant) readings.
+
+		Single-bevel profiled wheels (one Profile Segment, e.g. 1V1/12V9/11V9) wear *along
+		the slope* — diameter, inner diameter, and height all shrink together at the same
+		fixed angle. Using this event's own current inner_diameter/diamond_height (not the
+		Wheel Type's original constants) reproduced the real sheet's recorded current
+		volume exactly for the large majority of rows; the Wheel Type's angle is the one
+		thing that stays constant.
+
+		Compound/stepped profiles (2+ segments) have no real data yet on how current
+		readings map onto a multi-segment chain, so this falls back to the Wheel Type's
+		original segments/height — a known, documented limitation, not a validated model.
+		"""
+		if not wheel_type.requires_correction_factor:
+			return wheel_type.original_inner_diameter, wheel_type.original_diamond_height, None
+
+		if len(wheel_type.profile_segments) == 1:
+			angle = wheel_type.profile_segments[0].angle
+			return self.inner_diameter, self.diamond_height, [SimpleNamespace(angle=angle, height=self.diamond_height)]
+
+		return wheel_type.original_inner_diameter, wheel_type.original_diamond_height, wheel_type.profile_segments
 
 	def on_submit(self):
 		self.apply_to_wheel()
@@ -113,6 +149,26 @@ def get_last_consumed_volume(wheel: str, exclude: str | None = None) -> float:
 		limit=1,
 	)
 	return flt(rows[0].consumed_volume) if rows else 0
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def measurable_wheel_query(doctype, txt, searchfield, start, page_len, filters):
+	"""Link-field query for Measurement Event's `wheel` field — only Wheels whose Type
+	Requires Measurement (see Wheel Shape / PRD v9); everything else uses Wheel Usability
+	Check instead. UX only — validate() is what actually enforces this."""
+	return frappe.db.sql(
+		"""
+		select w.name, w.wheel_type
+		from `tabWheel` w
+		inner join `tabWheel Type` wt on wt.name = w.wheel_type
+		where wt.requires_measurement = 1
+			and w.name like %(txt)s
+		order by w.name
+		limit %(page_len)s offset %(start)s
+		""",
+		{"txt": f"%{txt}%", "start": start, "page_len": page_len},
+	)
 
 
 def get_previous_submitted_event(wheel: str, exclude: str | None = None):

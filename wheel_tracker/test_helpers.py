@@ -100,15 +100,15 @@ def make_job_card() -> "frappe.model.document.Document":
 
 
 def cleanup_wheel_tracker_records(wheel_type_names: list[str]):
-	"""Delete Measurement Events, Wheels, and Wheel Types created for a test, in FK order."""
+	"""Delete Measurement Events, Wheel Usability Checks, Wheels, and Wheel Types created
+	for a test, in FK order."""
 	for wheel_type_name in wheel_type_names:
 		for wheel_name in frappe.get_all("Wheel", filters={"wheel_type": wheel_type_name}, pluck="name"):
-			for event_name in frappe.get_all(
-				"Measurement Event", filters={"wheel": wheel_name}, pluck="name"
-			):
-				event = frappe.get_doc("Measurement Event", event_name)
-				if event.docstatus == 1:
-					event.cancel()
-				frappe.delete_doc("Measurement Event", event_name, force=True)
+			for doctype in ("Measurement Event", "Wheel Usability Check"):
+				for doc_name in frappe.get_all(doctype, filters={"wheel": wheel_name}, pluck="name"):
+					doc = frappe.get_doc(doctype, doc_name)
+					if doc.docstatus == 1:
+						doc.cancel()
+					frappe.delete_doc(doctype, doc_name, force=True)
 			frappe.delete_doc("Wheel", wheel_name, force=True)
 		frappe.delete_doc("Wheel Type", wheel_type_name, force=True)

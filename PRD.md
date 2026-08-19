@@ -1,7 +1,63 @@
 # PRD — Resharpening Wheel (Diamond/CBN Wheel) Tracking Module
 **App target:** ERPNext v15 / Frappe Framework, hardcoded custom app (code-based doctypes, version-controlled)
 **Company:** CNC Leaders
-**Status:** Draft v6 — volume formulas corrected against an authoritative formula reference; current/worn volume now auto-computed
+**Status:** Draft v9 — P-series wheels split onto a separate usable/not-usable workflow; manual retirement generalized to any wheel
+
+---
+
+## v9 — P-series wheels don't get measured; a general manual-retirement workflow
+
+Talked to the shop floor: P-series slitting/cutting-off wheels (P1.5/P1.7/P2) aren't tracked by graduated caliper wear at all — an operator just judges a wheel usable or not usable, no dimensions involved. Measurement Event's whole model (diameter/inner diameter/height readings driving a computed volume) doesn't apply to them; forcing it would mean fabricating precision that was never really measured.
+
+**Wheel Shape gets a new `requires_measurement` field** (Check, default 1), fetched onto Wheel Type the same way `requires_correction_factor` already is. Seeded 0 for P1.5/P1.7/P2, 1 for everything else (1A1/12V9/11V9/1V1). A patch (`set_p_series_requires_measurement`) fixes the flag on the P-series Wheel Shape *and* Wheel Type records already live in the system, since `fetch_from` only refreshes on save and `seed_master_data`'s get-or-create doesn't touch existing rows.
+
+**Measurement Event refuses to be created against a Wheel whose Type has `requires_measurement` unchecked** — enforced in `validate()` (real guard) and mirrored client-side by filtering the Wheel picker to measurable wheels only (`measurable_wheel_query`, UX only). Existing historical baseline events for the 7 real P-series wheels (created by the original FLUTE backfill, before this rule existed) are untouched — the rule only blocks *new* ones.
+
+**New doctype: Wheel Usability Check** — the P-series replacement for Measurement Event, and, more generally, a manual retirement/reinstatement record usable against *any* Wheel (not just P-series) for a reason unrelated to consumption %, e.g. a diamond wheel that's physically cracked well before its volume runs out. Submittable, mirrors Measurement Event's shape: `wheel`, `wheel_type` (fetched), an optional `job_card` for traceability, `check_date`/`checked_by`, and a `usable` checkbox with a required `retirement_reason` when unchecked. On submit: usable → `reinstate_wheel()`; not usable → `retire_wheel()`. On cancel: reapplies whatever the next-most-recent submitted check for that Wheel said, or reinstates if none is left. (`mandatory_depends_on` on `retirement_reason` didn't actually enforce at insert time in this Frappe version — reason required is checked explicitly in `validate()` instead, matching how `WheelType.validate_dimensions()` already does its own explicit checks rather than leaning on JSON-only validation.)
+
+**Two new whitelisted functions on `wheel.py`**, alongside the existing `assign_to_job_card`/`release_from_job_card` pair: `retire_wheel(wheel, reason)` and `reinstate_wheel(wheel)` — both no-ops if the Wheel's already in the target state, both centralizing the status/retirement-field writes (per this file's existing rule: status transitions go through code, not ad-hoc field writes). `check_auto_retirement()` on `Wheel.validate()` is unchanged and still runs on every save — a wheel manually reinstated while genuinely still at ≥100% consumption immediately re-retires itself in the same save, which is correct (can't override a measurement-driven retirement that's still factually true), and doesn't apply to P-series wheels anyway since their `current_volume` never changes without a Measurement Event to update it.
+
+Added to the workspace under Operations, next to Measurement Event. 60 tests passing (12 new), clean migrate.
+
+---
+
+## v8 — backfilled the real profiled-wheel data; found profiled wheels wear differently than flat ones
+
+`Main data and flow.xlsx` turned out to have a second sheet ("Sheet1") pasted in as plain values from a linked external workbook, with no header row and an unfamiliar 20-column layout — 59 real 12V9/11V9/1V1 wheels (the "WHEELS WITH ANGLES" data referenced back in the original v1 correction, never actually imported). Reconstructing its column meanings by arithmetic alone only got to ~5% median error — not trustworthy for production import, especially right after the v6/v7 formula work. The external link named its source file directly; found it on the Desktop, password-protected ("ملف جرد حجارة المصنع و استهلاكه2-8-2026.xlsx" — the same file a prior formula-reference document had flagged as needing confirmation). User supplied the password; decrypted it (`msoffcrypto-tool`) to get the sheet's real headers and an Excel Table definition — no more guessing.
+
+**Validated the original-volume formula against real recorded volumes, per shape:**
+- **12V9**: angle = 45°, exact match (0.00% error, all 3 real wheels) — single Ring Frustum segment, same formula as v6.
+- **1V1**: angle = 45° or 10° depending on spec (parsed from a `-vNN-` token in the legacy name — the name's `-sNN-`/`-vNN-` tokens turned out to be genuine, shape-specific angle encodings). 15/19 wheels matched to <2% (many exact); 4 outliers are the same kind of source data-entry errors found in v6 (see below).
+- **11V9**: the name's `-s70-` token is *not* the geometric angle (using it gave 25–35% systematic error) — solved for the angle numerically against the real recorded volumes instead, independently across two different dimension families, and both converged to the same clean **20.00000°**. Confirms this is a real, single, shape-level constant, not a per-wheel value.
+
+This directly tests the compound/stepped-profile question from v7: the recorded historical volumes for 11V9 are reproduced *exactly* by a single Ring Frustum segment at 20°, not the two-segment chamfer+cone model the physical wheels apparently have. Read as: the shop's own spreadsheet has always used a single-segment simplification (the chamfer's volume contribution is evidently small enough to ignore), and matching that simplification is what "exactly like the Excel file" requires here. The 2-segment schema from v7 stays in the code for whenever a case actually needs it, but isn't used by anything real today.
+
+**New finding — profiled wheels wear differently than flat ones.** v6 established that flat wheels (1A1/P-series) wear *only* radially — bore and layer height stay constant, only the outer diameter reading matters for current volume. Testing that same assumption against the real 11V9/12V9/1V1 current-volume numbers gave 42–68% median error — badly wrong. The fix: profiled wheels wear *along the bevel*, so diameter, inner diameter, and layer height all shrink together; recomputing current volume from *this measurement's own* current inner-diameter/height readings (not the Wheel Type's original constants), holding only the angle fixed, reproduced the real recorded current volumes essentially exactly (median error back to 0.00%). `MeasurementEvent._volume_inputs()` now branches on geometry family: flat wheels still use the Wheel Type's constant inner diameter/height (v6, unchanged); single-segment profiled wheels use this event's own readings; compound/stepped profiles (no real data to validate against) fall back to the Wheel Type's original segments, documented as an unvalidated limitation.
+
+**Data-quality issues found and handled, not silently guessed around** (same pattern as the v6 FLUTE anomalies):
+- Spec code 102302 (2 wheels, `SL-B-1V1-100-T4-0247/0248`): recorded inner diameter (104.9mm) larger than its recorded outer diameter (100mm) — physically impossible. **Excluded from the import.**
+- One row (`SL-B-1v1-100-T5-0189`) had its spec `Code` cell showing `5.08` — a stray copy of its own height value, not a real code. Its dimensions/shape/material/volume exactly matched 5 other wheels filed under code 101552, so it was corrected to join that spec rather than becoming its own bogus one-wheel type.
+- A handful of individual rows (e.g. `SH-D-12V9-100-T20-0063`, `SH-D-1V1-125-T4-0085`) have recorded volumes the formula can't reproduce even with the right angle — inconsistent with their own sibling rows, so left as imported (the formula-driven `confirmed_volume` going forward is trusted over that one stale historical number, same call made for the 5 FLUTE outliers in v6).
+
+**Result:** 19 new Wheel Types, 57 new Wheels, 57 new submitted baseline Measurement Events, all through the same `Wheel`/`Measurement Event` code path as a live measurement (no separate import logic duplicating the wear math). Combined with the v6 FLUTE backfill: 62 Wheel Types, 136 Wheels, 135 submitted Measurement Events. Full test suite (48 tests) passing, clean migrate.
+
+---
+
+## v7 — reconciling a second formula reference; 11V9/12V9 are a stepped profile, not a single bevel
+
+Handed a second document — `resharpening-stone-shapes-volume-reference.md` — alongside the same PDF from v6, with an explicit "go think harder" to reconcile them. It disagreed with v6 on two points; one was rejected, the other was real and is now fixed.
+
+**Rejected: its 1V1/11V9/12V9 geometry.** It models these as a wedge whose abrasive band narrows to a knife edge as you move *radially* outward (Pappus's centroid theorem over a trapezoid parametrized by two radii and two band-widths). v6's model — a band of *constant* radial width that shifts position as you move *axially* along the wheel — is a different, incompatible shape: plugging the PDF's own worked numbers into this document's formula gives ~7,262mm³, not the PDF's 14,284.19mm³. Kept v6's model, for three reasons: (1) the PDF's own prose says outright which diameter is "the variable that changes with wear" and which are "ثابت" (constant) — that's a direct statement of the physical model, not something inferred from the numbers; (2) the PDF's parametrization needs exactly the three measurements the legacy sheet already has (diameter, inner diameter, height) plus an angle — this document's needs a different measurement (band width at two separate points) nobody at CNC Leaders currently records; (3) this document repeatedly flags itself as unverified web research ("please confirm this against the physical stones," "worth a sanity check") — the PDF gives a concrete worked example.
+
+**Rejected: its "P2/P1.7/P1.5 are flat rectangular plates" theory.** Also self-flagged as an unconfirmed guess. Contradicted by data already live in the system: these have real circular diameter/inner-diameter values (125mm, 104.9mm — same family as every 1A1) and the annulus formula already matches them closely. They're thin flat wheels, not plates — no change from v3/v6.
+
+**Adopted: 11V9/12V9 are a compound/stepped profile, not a single bevel like 1V1.** This document raised the possibility (a main cone plus a separate chamfer near the bore, each with its own angle); confirmed against the real physical wheels. Neither reference document gives a worked numerical example for this case (the PDF only covers 1V1/45), so unlike the single-segment formula, this one has no external number to verify against — flagged as such everywhere it appears in code and docs.
+
+**Schema change:** `Wheel Type.angle` (a single scalar Float, added in v6) is replaced by `Wheel Type.profile_segments`, a child table (`Wheel Type Profile Segment`: `angle` + `height` per row). `calculate_wheel_volume()` walks the rows in order, chaining each segment's outer/inner diameters from where the previous one ended, and sums a Ring Frustum volume per segment (see v6 for that formula) — one row reproduces the exact v6/1V1 behavior; two rows handle 11V9/12V9. `original_diamond_height` is now read-only and auto-set to the sum of segment heights for profiled shapes (still directly editable for flat shapes, which have no segments). Verified the chaining logic is internally consistent: splitting one segment's total taper into two identical half-segments reproduces the exact same volume as a single segment (same net geometry, two integration steps) — see `test_wheel_type.py::test_stepped_profiled_wheel_sums_two_segments`.
+
+**Also added — a metric this document didn't touch but a fresh re-read of the PDF caught was missing:** "نسبة الخسارة" (loss ratio) — `(Wheel Type.Original Diameter − Measurement Event.Diameter) ÷ 2`, the radial wear in mm. It's one of the PDF's five documented calculation steps and had never been implemented; it's a simple caliper-only cross-check independent of the volume formula, now on Measurement Event as `radial_wear`.
+
+No real Wheel Type has ever used a profiled shape (all 43 are 1A1/P-series flat), so none of this touches live data — purely forward-looking, same as v6.
 
 ---
 

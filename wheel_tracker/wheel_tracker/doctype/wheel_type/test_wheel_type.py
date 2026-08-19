@@ -2,11 +2,19 @@
 # For license information, please see license.txt
 
 import math
+from types import SimpleNamespace
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from wheel_tracker.test_helpers import cleanup_wheel_tracker_records, make_wheel_type
+from wheel_tracker.wheel_tracker.doctype.wheel_type.wheel_type import calculate_wheel_volume
+
+
+def _segments(angle_height_pairs):
+	"""Plain stand-ins for Wheel Type Profile Segment rows — calculate_wheel_volume only
+	reads .angle/.height, so a real child-table doc isn't needed for a pure-function test."""
+	return [SimpleNamespace(angle=a, height=h) for a, h in angle_height_pairs]
 
 
 class TestWheelType(FrappeTestCase):
@@ -41,7 +49,7 @@ class TestWheelType(FrappeTestCase):
 		expected = (math.pi / 4) * (125**2 - 104.9**2) * 2
 		self.assertAlmostEqual(st.original_volume, expected, places=1)
 
-	def test_profiled_wheel_uses_ring_frustum_formula(self):
+	def test_single_bevel_profiled_wheel_uses_ring_frustum_formula(self):
 		"""Exact worked example from the "Volume equations for grinding wheels" PDF
 		(1V1/45 Gash): Dob=100, Dib=78.4, angle=45deg, H=5 -> V=14284.19mm3 (see PRD v6).
 		Confirms the Ring Frustum formula, not the old empirical correction factor."""
@@ -50,14 +58,38 @@ class TestWheelType(FrappeTestCase):
 				shape="1V1",
 				original_diameter=100,
 				original_inner_diameter=78.4,
-				original_diamond_height=5,
-				angle=45,
+				profile_segments=[{"angle": 45, "height": 5}],
 			)
 		)
 		self.assertTrue(st.requires_correction_factor)
 		self.assertAlmostEqual(st.original_volume, 14284.19, places=1)
+		self.assertAlmostEqual(st.original_diamond_height, 5, places=3)
 
-	def test_profiled_wheel_requires_angle(self):
+	def test_stepped_profiled_wheel_sums_two_segments(self):
+		"""11V9/12V9 are a compound/stepped profile — a main cone plus a separate chamfer
+		near the bore, each with its own angle (confirmed against the physical wheels,
+		see PRD v7). No independent worked example exists for this case (unlike 1V1
+		above), so this checks internal consistency instead: splitting one segment's
+		total taper into two identical half-segments must reproduce the exact same
+		volume as computing it as a single segment (same net geometry, two integration
+		steps) — proving the segment-chaining logic itself is sound."""
+		one_segment = calculate_wheel_volume(100, 78.4, 5, True, _segments([(45, 5)]))
+		two_half_segments = calculate_wheel_volume(100, 78.4, 5, True, _segments([(45, 2.5), (45, 2.5)]))
+		self.assertAlmostEqual(one_segment, two_half_segments, places=6)
+
+		st = self.track(
+			make_wheel_type(
+				shape="12V9",
+				original_diameter=100,
+				original_inner_diameter=60,
+				profile_segments=[{"angle": 30, "height": 3}, {"angle": 20, "height": 4}],
+			)
+		)
+		self.assertTrue(st.requires_correction_factor)
+		self.assertAlmostEqual(st.original_diamond_height, 7, places=3)
+		self.assertGreater(st.original_volume, 0)
+
+	def test_profiled_wheel_requires_at_least_one_segment(self):
 		self.assertRaises(
 			frappe.ValidationError,
 			make_wheel_type,
@@ -65,6 +97,7 @@ class TestWheelType(FrappeTestCase):
 			original_diameter=100,
 			original_inner_diameter=60,
 			original_diamond_height=20,
+			profile_segments=[],
 		)
 
 	def test_usable_original_volume_applies_configured_floor(self):

@@ -7,6 +7,7 @@
  "field_order": [
   "shape_code",
   "wheel_geometry",
+  "requires_measurement",
   "column_break_1",
   "description"
  ],
@@ -28,6 +29,14 @@
    "label": "Wheel Geometry",
    "options": "Wheel Geometry",
    "reqd": 1
+  },
+  {
+   "default": "1",
+   "description": "Unchecked for shapes tracked as simply usable/not-usable rather than by graduated caliper wear (e.g. thin slitting wheels — P1.5/P1.7/P2 — per the shop floor, not something worth measuring incrementally). Wheels of an unchecked shape can't have a Measurement Event created against them; use Wheel Usability Check instead. See PRD v9.",
+   "fieldname": "requires_measurement",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Requires Measurement"
   },
   {
    "fieldname": "column_break_1",

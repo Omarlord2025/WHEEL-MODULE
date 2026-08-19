@@ -4,7 +4,12 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from wheel_tracker.wheel_tracker.doctype.wheel.wheel import assign_to_job_card, release_from_job_card
+from wheel_tracker.wheel_tracker.doctype.wheel.wheel import (
+	assign_to_job_card,
+	reinstate_wheel,
+	release_from_job_card,
+	retire_wheel,
+)
 from wheel_tracker.test_helpers import (
 	cleanup_wheel_tracker_records,
 	make_job_card,
@@ -86,3 +91,45 @@ class TestWheel(FrappeTestCase):
 		second = make_measurement_event(wheel.name, diameter=85)
 		wheel.reload()
 		self.assertAlmostEqual(wheel.total_cost_allocated, first.job_cost + second.job_cost, places=4)
+
+	def test_retire_wheel_sets_status_and_reason(self):
+		wheel = make_wheel(self.wheel_type.name)
+		status = retire_wheel(wheel.name, "Chipped during use")
+		self.assertEqual(status, "Retired")
+		wheel.reload()
+		self.assertEqual(wheel.status, "Retired")
+		self.assertEqual(wheel.retirement_reason, "Chipped during use")
+		self.assertTrue(wheel.retirement_date)
+
+	def test_retire_wheel_clears_current_job_card(self):
+		wheel = make_wheel(self.wheel_type.name)
+		job_card = make_job_card()
+		assign_to_job_card(wheel.name, job_card.name)
+
+		retire_wheel(wheel.name, "Cracked")
+		wheel.reload()
+		self.assertEqual(wheel.status, "Retired")
+		self.assertFalse(wheel.current_job_card)
+
+	def test_retire_wheel_is_a_noop_if_already_retired(self):
+		wheel = make_wheel(self.wheel_type.name)
+		retire_wheel(wheel.name, "First reason")
+		retire_wheel(wheel.name, "Second reason")
+		wheel.reload()
+		self.assertEqual(wheel.retirement_reason, "First reason")
+
+	def test_reinstate_wheel_returns_to_in_stock(self):
+		wheel = make_wheel(self.wheel_type.name)
+		retire_wheel(wheel.name, "Marked not usable by mistake")
+
+		status = reinstate_wheel(wheel.name)
+		self.assertEqual(status, "In Stock")
+		wheel.reload()
+		self.assertEqual(wheel.status, "In Stock")
+		self.assertFalse(wheel.retirement_date)
+		self.assertFalse(wheel.retirement_reason)
+
+	def test_reinstate_wheel_is_a_noop_if_not_retired(self):
+		wheel = make_wheel(self.wheel_type.name)
+		status = reinstate_wheel(wheel.name)
+		self.assertEqual(status, "In Stock")

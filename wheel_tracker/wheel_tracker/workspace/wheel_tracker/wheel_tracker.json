@@ -150,6 +150,17 @@
    "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Wheel Usability Check",
+   "link_count": 0,
+   "link_to": "Wheel Usability Check",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Bulk Import Wheels",
    "link_count": 0,
    "link_to": "wheel-bulk-import",
@@ -177,7 +188,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-08-17 12:46:47.181670",
+ "modified": "2026-08-19 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Wheel Tracker",
  "name": "Wheel Tracker",

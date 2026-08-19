@@ -20,20 +20,26 @@ WHEEL_MATERIALS = [
 WHEEL_SHAPES = [
 	# Flat/straight — exact annulus formula.
 	{"shape_code": "1A1", "wheel_geometry": "Flat / Straight"},
+	# P-series slitting/cutting-off wheels aren't tracked by graduated caliper wear at
+	# all per the shop floor (see PRD v9) — they're simply usable or not usable, so
+	# Measurement Event is blocked for them; Wheel Usability Check is used instead.
 	{
 		"shape_code": "P1.5",
 		"wheel_geometry": "Flat / Straight",
-		"description": "Thin slitting/cutting-off wheel, ~1.5mm width.",
+		"requires_measurement": 0,
+		"description": "Thin slitting/cutting-off wheel, ~1.5mm width. Tracked usable/not-usable, not by measurement.",
 	},
 	{
 		"shape_code": "P1.7",
 		"wheel_geometry": "Flat / Straight",
-		"description": "Thin slitting/cutting-off wheel, ~1.7mm width.",
+		"requires_measurement": 0,
+		"description": "Thin slitting/cutting-off wheel, ~1.7mm width. Tracked usable/not-usable, not by measurement.",
 	},
 	{
 		"shape_code": "P2",
 		"wheel_geometry": "Flat / Straight",
-		"description": "Thin slitting/cutting-off wheel, ~2mm width.",
+		"requires_measurement": 0,
+		"description": "Thin slitting/cutting-off wheel, ~2mm width. Tracked usable/not-usable, not by measurement.",
 	},
 	# Profiled — conical-frustum-ring formula, driven by each Wheel Type's own Angle
 	# (the same base shape can be cut at different angles, e.g. 1V1/45 vs 1V1/60 — see PRD v6).

@@ -9,6 +9,7 @@
   "shape",
   "wheel_geometry",
   "requires_correction_factor",
+  "requires_measurement",
   "material",
   "column_break_head",
   "item",
@@ -20,7 +21,7 @@
   "column_break_dims",
   "original_diamond_height",
   "total_body_height",
-  "angle",
+  "profile_segments",
   "section_break_volume",
   "auto_calc_volume",
   "column_break_volume",
@@ -82,6 +83,15 @@
    "read_only": 1
   },
   {
+   "default": "1",
+   "description": "Unchecked (from the Shape) means Wheels of this Type are tracked as simply usable/not-usable via Wheel Usability Check, not caliper measurement — see PRD v9.",
+   "fetch_from": "shape.requires_measurement",
+   "fieldname": "requires_measurement",
+   "fieldtype": "Check",
+   "label": "Requires Measurement",
+   "read_only": 1
+  },
+  {
    "fieldname": "material",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -140,11 +150,12 @@
    "fieldtype": "Column Break"
   },
   {
-   "description": "For flat/straight shapes (1A1, P-series) this equals the total body height/width. For profiled shapes this is only the abrasive band height.",
+   "description": "For flat/straight shapes (1A1, P-series), enter this directly \u2014 it's the wheel's full height/width. For profiled shapes it's read-only, auto-set to the sum of the Profile Segments' heights below.",
    "fieldname": "original_diamond_height",
    "fieldtype": "Float",
    "label": "Original Diamond Layer Height (mm)",
    "precision": "3",
+   "read_only_depends_on": "eval:doc.requires_correction_factor",
    "reqd": 1
   },
   {
@@ -157,12 +168,11 @@
   },
   {
    "depends_on": "eval:doc.requires_correction_factor",
-   "description": "The abrasive band's taper angle in degrees, e.g. 45 for 1V1/45. Used directly in the volume formula for profiled shapes \u2014 required whenever Requires Correction Factor is checked.",
-   "fieldname": "angle",
-   "fieldtype": "Float",
-   "label": "Angle (\u00b0)",
-   "mandatory_depends_on": "eval:doc.requires_correction_factor",
-   "precision": "2"
+   "description": "The abrasive band's profile, as one or more conical segments walked from the (wearing) outer diameter inward to the (constant) bore. One row = a simple single-bevel shape like 1V1. Two rows = a compound/stepped shape like 11V9 or 12V9 (a main cone plus a separate chamfer near the bore, each with its own angle) \u2014 order matters, first row starts at the outer face. See PRD v7.",
+   "fieldname": "profile_segments",
+   "fieldtype": "Table",
+   "label": "Profile Segments",
+   "options": "Wheel Type Profile Segment"
   },
   {
    "fieldname": "section_break_volume",
@@ -181,7 +191,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "description": "Flat shapes: (pi/4) x (D\u00b2 - d\u00b2) x Diamond Height. Profiled shapes: exact conical-frustum-ring volume from Diameter/Inner Diameter/Diamond Height/Angle. Editable \u2014 override if a manufacturer spec sheet disagrees.",
+   "description": "Flat shapes: (pi/4) x (D\u00b2 - d\u00b2) x Diamond Height. Profiled shapes: exact conical-frustum-ring volume, summed across the Profile Segments below. Editable \u2014 override if a manufacturer spec sheet disagrees.",
    "fieldname": "original_volume",
    "fieldtype": "Float",
    "label": "Original Volume (mm\u00b3)",

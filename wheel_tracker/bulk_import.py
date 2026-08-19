@@ -40,7 +40,8 @@ TEMPLATE_COLUMNS = [
 	"original_inner_diameter",
 	"original_diamond_height",
 	"total_body_height",  # optional
-	"angle",  # required for profiled/angled shapes (e.g. 45 for 1V1/45); degrees
+	"angle",  # single-bevel profiled shapes only (e.g. 45 for 1V1/45), degrees; compound/
+	          # stepped shapes (11V9/12V9) need a second Profile Segment added via Desk after import
 	"original_volume_override",  # optional; blank = auto-calculated from dimensions
 	"unit_cost",
 	"reorder_point",  # optional, default 0
@@ -131,6 +132,14 @@ def get_or_create_wheel_type(row: dict, cache: dict, summary: dict) -> str:
 	item = get_or_create_item((row.get("item") or "").strip() or spec_code, shape, material)
 	volume_override = flt(row.get("original_volume_override")) or None
 
+	profile_segments = []
+	angle = flt(row.get("angle")) or None
+	if angle:
+		# A flat CSV row can only describe a single-bevel profile (one angle, one height) —
+		# a compound/stepped shape (11V9/12V9) needs its second segment added via Desk after
+		# import, since a variable-length breakpoint list doesn't fit one CSV column. See PRD v7.
+		profile_segments = [{"angle": angle, "height": flt(row["original_diamond_height"])}]
+
 	wheel_type = frappe.get_doc(
 		{
 			"doctype": "Wheel Type",
@@ -143,7 +152,7 @@ def get_or_create_wheel_type(row: dict, cache: dict, summary: dict) -> str:
 			"original_inner_diameter": flt(row["original_inner_diameter"]),
 			"original_diamond_height": flt(row["original_diamond_height"]),
 			"total_body_height": flt(row.get("total_body_height")),
-			"angle": flt(row.get("angle")) or None,
+			"profile_segments": profile_segments,
 			"auto_calc_volume": 0 if volume_override else 1,
 			"original_volume": volume_override,
 			"unit_cost": flt(row["unit_cost"]),

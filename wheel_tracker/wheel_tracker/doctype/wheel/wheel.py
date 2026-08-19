@@ -104,3 +104,39 @@ def release_from_job_card(wheel: str):
 	doc.current_job_card = None
 	doc.save()
 	return doc.status
+
+
+@frappe.whitelist()
+def retire_wheel(wheel: str, reason: str):
+	"""Manually retire a Wheel outside the measurement-driven wear flow — called by
+	Wheel Usability Check (see PRD v9), and usable directly for any Wheel that needs
+	retiring for a reason other than reaching 100% consumption (e.g. physically
+	damaged). A no-op if already Retired, so it's safe to call unconditionally."""
+	doc = frappe.get_doc("Wheel", wheel)
+	if doc.status == STATUS_RETIRED:
+		return doc.status
+
+	doc.status = STATUS_RETIRED
+	doc.retirement_date = today()
+	doc.retirement_reason = reason
+	doc.current_job_card = None
+	doc.save(ignore_permissions=True)
+	return doc.status
+
+
+@frappe.whitelist()
+def reinstate_wheel(wheel: str):
+	"""Bring a Retired Wheel back to In Stock — called by Wheel Usability Check when a
+	later check finds it usable after all. A no-op if not currently Retired. Wheels
+	that are still at >=100% consumption (see check_auto_retirement) immediately
+	re-retire themselves on the save below — this can't be used to override a
+	measurement-driven retirement that's still factually true."""
+	doc = frappe.get_doc("Wheel", wheel)
+	if doc.status != STATUS_RETIRED:
+		return doc.status
+
+	doc.status = STATUS_IN_STOCK
+	doc.retirement_date = None
+	doc.retirement_reason = None
+	doc.save(ignore_permissions=True)
+	return doc.status

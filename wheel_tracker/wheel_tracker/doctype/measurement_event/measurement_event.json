@@ -25,6 +25,7 @@
   "column_break_wear",
   "previous_consumed_volume",
   "incremental_consumed_volume",
+  "radial_wear",
   "section_break_cost",
   "cost_per_mm3",
   "job_cost",
@@ -166,6 +167,14 @@
    "fieldname": "incremental_consumed_volume",
    "fieldtype": "Float",
    "label": "Incremental Consumed Volume (mm\u00b3)",
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "description": "(Wheel Type's Original Diameter \u2212 Diameter) \u00f7 2 \u2014 the radial amount of wheel lost, in mm. A simple caliper-only cross-check against the volume-based wear figures above.",
+   "fieldname": "radial_wear",
+   "fieldtype": "Float",
+   "label": "Radial Wear (mm)",
    "precision": "3",
    "read_only": 1
   },

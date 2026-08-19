@@ -6,3 +6,4 @@
 # Patches added in this section will be executed after doctypes are migrated
 wheel_tracker.patches.create_job_card_custom_fields
 wheel_tracker.patches.seed_master_data
+wheel_tracker.patches.set_p_series_requires_measurement

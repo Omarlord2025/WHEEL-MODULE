@@ -30,14 +30,14 @@ class TestMeasurementEvent(FrappeTestCase):
 		return doc
 
 	def expected_volume(self, diameter):
-		"""confirmed_volume is computed from `diameter` alone — inner diameter/height/angle
-		stay at the Wheel Type's constant original values (see PRD v6)."""
+		"""confirmed_volume is computed from `diameter` alone — inner diameter/segments
+		stay at the Wheel Type's constant original values (see PRD v6/v7)."""
 		return calculate_wheel_volume(
 			diameter,
 			self.wheel_type.original_inner_diameter,
 			self.wheel_type.original_diamond_height,
 			self.wheel_type.requires_correction_factor,
-			self.wheel_type.angle,
+			self.wheel_type.profile_segments,
 		)
 
 	def test_confirmed_volume_is_computed_from_diameter(self):
@@ -104,3 +104,62 @@ class TestMeasurementEvent(FrappeTestCase):
 
 		event.cancel()
 		self.assertAlmostEqual(frappe.db.get_value("Job Card", job_card.name, "custom_wheel_wear_cost"), 0, places=4)
+
+
+class TestMeasurementEventBlockedForNonMeasuredShapes(FrappeTestCase):
+	"""P-series slitting wheels are tracked usable/not-usable (Wheel Usability Check),
+	not by caliper measurement — Requires Measurement is unchecked on their Wheel Shape
+	(seeded), so Measurement Event must refuse to be created against them. See PRD v9."""
+
+	def setUp(self):
+		self._created = []
+		self.wheel_type = self.track(
+			make_wheel_type(
+				shape="P2", original_diameter=125, original_inner_diameter=104.9, original_diamond_height=2
+			)
+		)
+		self.wheel = make_wheel(self.wheel_type.name)
+
+	def tearDown(self):
+		cleanup_wheel_tracker_records(self._created)
+
+	def track(self, doc):
+		self._created.append(doc.name)
+		return doc
+
+	def test_measurement_event_is_rejected(self):
+		self.assertRaises(frappe.ValidationError, make_measurement_event, self.wheel.name)
+
+
+class TestMeasurementEventProfiled(FrappeTestCase):
+	"""Single-bevel profiled wheels wear along the slope — unlike flat wheels, this
+	measurement's own inner_diameter/diamond_height readings drive the volume, not the
+	Wheel Type's original constants. Real-data ground truth from the decrypted "WHEELS
+	WITH ANGLES" sheet (see PRD v8): a 1V1/45 wheel type (D=100, d=78.4, T=5, angle=45,
+	original_volume=14284.19) measured later at diameter=84.45/inner=78.4/height=5 has a
+	recorded current volume of 3631.46 — reproduced by this model to within 0.01%."""
+
+	def setUp(self):
+		self._created = []
+		self.wheel_type = self.track(
+			make_wheel_type(
+				shape="1V1",
+				original_diameter=100,
+				original_inner_diameter=78.4,
+				profile_segments=[{"angle": 45, "height": 5}],
+			)
+		)
+		self.wheel = make_wheel(self.wheel_type.name)
+
+	def tearDown(self):
+		cleanup_wheel_tracker_records(self._created)
+
+	def track(self, doc):
+		self._created.append(doc.name)
+		return doc
+
+	def test_confirmed_volume_uses_this_events_own_readings(self):
+		event = make_measurement_event(
+			self.wheel.name, diameter=84.45, inner_diameter=78.4, diamond_height=5
+		)
+		self.assertAlmostEqual(event.confirmed_volume, 3631.46, delta=1)
