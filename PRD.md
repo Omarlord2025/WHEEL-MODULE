@@ -1,7 +1,21 @@
 # PRD — Resharpening Wheel (Diamond/CBN Wheel) Tracking Module
 **App target:** ERPNext v15 / Frappe Framework, hardcoded custom app (code-based doctypes, version-controlled)
 **Company:** CNC Leaders
-**Status:** Draft v17 — language toggle removed from the Grinding Wheels workspace, by customer request
+**Status:** Draft v18 — a real language switch, surfaced on Wheel Tracker Settings
+
+---
+
+## v18 — a real language switch, this time on Wheel Tracker Settings
+
+After v17 removed both language-toggle workspace buttons by customer request, the customer asked for the capability back — but as a real settings field, switchable "from the settings of the wheel [tracker] itself," not a floating workspace button, and covering every doctype/field name across the whole module.
+
+**`Wheel Tracker Settings` (the app's own Single doctype) gets a `language` field** (Select: English/Arabic). Its `on_update()` writes `System Settings.language` and bulk-updates every row in `tabUser` to match, then clears cache — **Frappe has no concept of a per-module display language**; switching is always whole-site and every-user, so there's no way to show Arabic only inside Wheel Tracker's own doctypes while the rest of Desk stays English, and no point pretending otherwise. In practice, since the user's own session language (`User.language`) otherwise overrides the site default, both have to be written for the switch to actually take effect for everyone immediately rather than only for new/guest sessions. A client script (`public/js/wheel_tracker_settings.js`) forces a full page reload right after a save that actually changed the field, since Desk loads its translation dictionary once per full boot, not reactively per-save.
+
+**Audited `translations/ar.csv` (v15) for real gaps**, not just trusted it was still complete: wrote a script comparing every DocType name, field label, and Select option across all of this app's own doctype JSON files against the CSV's source strings. Found 18 genuinely missing (`Amended From`, `Code`, `Consumed Volume (mm³)`, `Description`, `Disabled`, `Item`, `Material`, `Reason`, `Shape Code`, `Shape Image`, `Shape Image URL`, `Status`, `Stock Entry`, `Upload Shape Photo`, `Warehouse`, plus the Number Card's full label `"Wheels Nearing Retirement (>=80%)"`, a report column `"Date"`, and the new field's own strings) and added them — deliberately skipping only the two naming-series format patterns (`ME-.YYYY.-.#####` etc., not real text) and the generic `"Series"` label.
+
+**Checked an assumption before relying on it**: confirmed via `grep` that `apps/frappe/frappe/translations/ar.csv` doesn't exist at all (Frappe core ships no Arabic file), and that ERPNext's own 9000+-line `ar.csv` only defines strings as they appear in actual ERPNext sentences — not standalone generic DocField labels like `Status`, `Date`, `Item`, `Warehouse` in isolation. So this app's own `ar.csv` has to carry those too, even though they look like "someone else's problem" — there is no one else's file that covers them.
+
+Verified end-to-end via `bench execute`: flipping `Wheel Tracker Settings.language` to Arabic and back confirmed `System Settings.language` and every real `tabUser` row actually changed, and that `frappe._("...", lang="ar")` resolves real Arabic text for both old and newly-added strings, not just a cache artifact. 85 tests passing (unchanged — no wear/cost logic touched), clean migrate.
 
 ---
 

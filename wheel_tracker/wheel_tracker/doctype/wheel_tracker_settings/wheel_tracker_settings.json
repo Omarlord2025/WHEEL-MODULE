@@ -7,7 +7,9 @@
   "reorder_notify_role",
   "send_email_alerts",
   "column_break_1",
-  "usable_volume_floor_percent"
+  "usable_volume_floor_percent",
+  "section_break_language",
+  "language"
  ],
  "fields": [
   {
@@ -36,11 +38,25 @@
    "fieldtype": "Percent",
    "label": "Usable Volume Floor %",
    "reqd": 1
+  },
+  {
+   "fieldname": "section_break_language",
+   "fieldtype": "Section Break",
+   "label": "Language"
+  },
+  {
+   "default": "English",
+   "description": "Switches the whole site's Desk language — field names, doctype names, and messages — for every user, immediately on save.",
+   "fieldname": "language",
+   "fieldtype": "Select",
+   "label": "Language",
+   "options": "English\nArabic",
+   "reqd": 1
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-08-16 00:00:00.000000",
+ "modified": "2026-10-09 00:56:29.015339",
  "modified_by": "Administrator",
  "module": "Wheel Tracker",
  "name": "Wheel Tracker Settings",

@@ -105,14 +105,22 @@ review it and submit it to confirm.
 Its Wheel Type doesn't Require Measurement — some shapes (like thin slitting wheels)
 are tracked as simply usable/not-usable instead. Use Wheel Retirement for those.
 
-## 11. Reading the Consumption % Bar
+## 11. Switching Between English and Arabic
+
+Open **Wheel Tracker Settings** and set **Language** to English or Arabic, then save.
+Every field name, doctype name, and system message across the whole site — not just
+Wheel Tracker — switches for every user the moment it's saved, and the page reloads
+automatically to show it. There's no per-person override: this is one shared switch for
+everyone, by design, since the shop floor all works in the same language at once.
+
+## 12. Reading the Consumption % Bar
 
 Wherever you see a Consumption % bar in a list (Wheel, Measurement Event), it now shows
 the percentage as a number on the bar itself, colored green under 70%, orange from
 70–90%, and red at 90% and above — a quick visual read on which wheels are closest to
 retiring.
 
-## 12. Where to Go Next
+## 13. Where to Go Next
 
 - `CLAUDE.md` — engineering rules and design principles, for developers.
 - `PRD.md` — the full spec and formula history, if you need the "why" behind a number.

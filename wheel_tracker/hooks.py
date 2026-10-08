@@ -50,6 +50,7 @@ doctype_js = {
 	"Wheel": "public/js/shape_image_live_preview.js",
 	"Measurement Event": "public/js/shape_image_live_preview.js",
 	"Wheel Retirement": "public/js/shape_image_live_preview.js",
+	"Wheel Tracker Settings": "public/js/wheel_tracker_settings.js",
 }
 doctype_list_js = {
 	"Wheel": "public/js/wheel_list.js",
