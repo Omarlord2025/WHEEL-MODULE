@@ -21,6 +21,10 @@ been used, what that wear cost, and which jobs it was used on.
   wear happened since the last reading.
 - **Wheel Retirement** — the record of a Wheel being taken permanently out of service.
 
+Every one of these shows a reference photo of the wheel's shape (1A1, 1V1, 11V9, 12V9,
+or P-series) right on the form and in its list view — set once on **Wheel Shape**, it
+carries through automatically wherever that shape shows up.
+
 ## 3. Receiving New Wheels
 
 When new wheels arrive, they're brought into stock with a **Material Receipt** Stock
@@ -59,11 +63,12 @@ every single job to keep costs accurate per job.
 
 ## 6. When a Wheel Retires Itself (Auto-Retirement)
 
-If a measurement shows a wheel has reached 100% consumption, it doesn't just get
-flagged — it's automatically retired for real: a Wheel Retirement is created and
-submitted for you, which also removes the wheel from stock with a genuine Material
-Issue. There's no manual paperwork to file for this case; it's handled the moment the
-measurement is submitted.
+If a measurement shows a wheel has reached 100% consumption, the Wheel is marked
+Retired immediately — but it doesn't leave stock on its own. A **Wheel Retirement** is
+drafted for you automatically, sitting there until someone opens it and submits it. Only
+that submission actually removes the wheel from stock with a genuine Material Issue —
+so there's always a review step between "this wheel ran out" and "it's really gone from
+the ledger."
 
 ## 7. Retiring a Wheel Early (Damage, Chips, Cracks)
 
@@ -75,8 +80,10 @@ handles itself (see above).
 ## 8. Undoing a Mistake
 
 - **Cancelling a Measurement Event** reverses everything it did: the Wheel's
-  dimensions and status go back to what they were before, and if it auto-retired the
-  Wheel, that Wheel Retirement (and its Stock Entry) is cancelled too.
+  dimensions and status go back to what they were before. If it auto-retired the Wheel
+  and that draft Wheel Retirement is still pending review, the draft is simply removed;
+  if someone already reviewed and submitted it, that retirement (and its Stock Entry)
+  is cancelled instead.
 - **Cancelling a Wheel Retirement** directly brings the Wheel back to In Stock and
   cancels its Material Issue.
 
@@ -90,29 +97,22 @@ enabled) until stock is replenished.
 
 **"Why is this Wheel Retired and I didn't retire it?"**
 Check the Measurement Event that caused it — it has an **Auto-Created Wheel
-Retirement** field linking straight to the record that was filed automatically when
-consumption hit 100%.
+Retirement** field linking straight to the record that was drafted automatically when
+consumption hit 100%. If it's still a draft, nothing has actually left stock yet —
+review it and submit it to confirm.
 
 **"Why can't I log a measurement for this wheel?"**
 Its Wheel Type doesn't Require Measurement — some shapes (like thin slitting wheels)
 are tracked as simply usable/not-usable instead. Use Wheel Retirement for those.
 
-## 11. Switching Between Arabic and English
-
-At the top of the Grinding Wheels workspace there's a language button (🌐 العربية /
-English). Click it to switch Desk's language for your own account and reload the page.
-This translates the standard Frappe/ERPNext screens and switches the layout to
-right-to-left for Arabic; this app's own field labels (Wheel, Factory Wheel Code, and
-so on) aren't translated yet and will still show in English either way.
-
-## 12. Reading the Consumption % Bar
+## 11. Reading the Consumption % Bar
 
 Wherever you see a Consumption % bar in a list (Wheel, Measurement Event), it now shows
 the percentage as a number on the bar itself, colored green under 70%, orange from
 70–90%, and red at 90% and above — a quick visual read on which wheels are closest to
 retiring.
 
-## 13. Where to Go Next
+## 12. Where to Go Next
 
 - `CLAUDE.md` — engineering rules and design principles, for developers.
 - `PRD.md` — the full spec and formula history, if you need the "why" behind a number.

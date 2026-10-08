@@ -4,8 +4,11 @@
  "creation": "2026-08-16 00:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
+ "image_field": "shape_image",
  "field_order": [
   "shape_code",
+  "shape_image",
+  "shape_image_preview",
   "wheel_geometry",
   "requires_measurement",
   "column_break_1",
@@ -20,6 +23,19 @@
    "label": "Shape Code",
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "description": "Click to upload or replace the reference photo below — shown on Wheel Type, Wheel, Measurement Event, and Wheel Retirement too.",
+   "fieldname": "shape_image",
+   "fieldtype": "Attach Image",
+   "label": "Upload Shape Photo"
+  },
+  {
+   "fieldname": "shape_image_preview",
+   "fieldtype": "Image",
+   "label": "Shape Image",
+   "options": "shape_image",
+   "read_only": 1
   },
   {
    "fieldname": "wheel_geometry",

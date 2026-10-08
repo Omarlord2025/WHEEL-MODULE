@@ -213,11 +213,12 @@ class TestMeasurementEventProfiled(FrappeTestCase):
 
 
 class TestMeasurementEventAutoRetirement(FrappeTestCase):
-	"""Auto-retirement must now do more than flip Wheel.status — it has to create and
-	submit a real Wheel Retirement + Material Issue, and reverse both on cancel. Needs a
-	Wheel with a genuine Warehouse/Bin quantity (not the bare make_wheel() fixture used
-	elsewhere in this file), since Wheel Retirement's Material Issue draws down real
-	stock. See PRD v12."""
+	"""Auto-retirement flips Wheel.status immediately but only *drafts* a Wheel
+	Retirement — the real Material Issue waits for a human to review and submit it
+	(see PRD v15, a customer decision: instant status flag, but no stock movement
+	without review). Needs a Wheel with a genuine Warehouse/Bin quantity (not the bare
+	make_wheel() fixture used elsewhere in this file), since submitting the retirement
+	draws down real stock."""
 
 	def setUp(self):
 		self._created = []
@@ -233,7 +234,7 @@ class TestMeasurementEventAutoRetirement(FrappeTestCase):
 		self._created.append(doc.name)
 		return doc
 
-	def test_submit_auto_creates_retirement_and_issues_stock(self):
+	def test_submit_auto_creates_draft_retirement_pending_review(self):
 		# diameter == inner diameter -> exact-annulus volume is 0 -> 100% consumption.
 		event = make_measurement_event(self.wheel.name, diameter=60)
 
@@ -243,27 +244,48 @@ class TestMeasurementEventAutoRetirement(FrappeTestCase):
 		self.assertTrue(event.auto_retirement)
 
 		retirement = frappe.get_doc("Wheel Retirement", event.auto_retirement)
-		self.assertEqual(retirement.docstatus, 1)
+		self.assertEqual(retirement.docstatus, 0)
 		self.assertEqual(retirement.wheel, self.wheel.name)
-		self.assertTrue(retirement.stock_entry)
-		self.assertEqual(frappe.db.get_value("Stock Entry", retirement.stock_entry, "docstatus"), 1)
-		self.assertEqual(frappe.db.get_value("Stock Entry", retirement.stock_entry, "purpose"), "Material Issue")
+		self.assertFalse(retirement.stock_entry)
 
+		# Nothing has actually left stock yet — only a human submitting the draft does that.
 		bin_qty = frappe.db.get_value(
 			"Bin", {"item_code": self.wheel_type.item, "warehouse": "_Test Warehouse - _TC"}, "actual_qty"
 		)
-		self.assertEqual(bin_qty, 0)
+		self.assertEqual(bin_qty, 1)
 
-	def test_cancel_reverses_retirement_and_stock_entry(self):
+	def test_cancel_while_draft_still_pending_deletes_it(self):
 		event = make_measurement_event(self.wheel.name, diameter=60)
 		retirement_name = event.auto_retirement
-		stock_entry_name = frappe.db.get_value("Wheel Retirement", retirement_name, "stock_entry")
+		self.assertEqual(frappe.db.get_value("Wheel Retirement", retirement_name, "docstatus"), 0)
 
 		event.cancel()
 
 		self.wheel.reload()
 		self.assertEqual(self.wheel.status, "In Stock")
 		self.assertAlmostEqual(self.wheel.current_volume, self.wheel_type.original_volume, places=2)
+		self.assertFalse(frappe.db.exists("Wheel Retirement", retirement_name))
+
+		bin_qty = frappe.db.get_value(
+			"Bin", {"item_code": self.wheel_type.item, "warehouse": "_Test Warehouse - _TC"}, "actual_qty"
+		)
+		self.assertEqual(bin_qty, 1)
+
+	def test_cancel_after_draft_was_reviewed_and_submitted_reverses_the_real_stock_issue(self):
+		event = make_measurement_event(self.wheel.name, diameter=60)
+		retirement_name = event.auto_retirement
+
+		# A human reviews the draft and confirms it — this is the only thing that
+		# actually submits a Wheel Retirement now (see create_auto_retirement()).
+		retirement = frappe.get_doc("Wheel Retirement", retirement_name)
+		retirement.submit()
+		stock_entry_name = retirement.stock_entry
+		self.assertTrue(stock_entry_name)
+
+		event.cancel()
+
+		self.wheel.reload()
+		self.assertEqual(self.wheel.status, "In Stock")
 		self.assertEqual(frappe.db.get_value("Wheel Retirement", retirement_name, "docstatus"), 2)
 		self.assertEqual(frappe.db.get_value("Stock Entry", stock_entry_name, "docstatus"), 2)
 

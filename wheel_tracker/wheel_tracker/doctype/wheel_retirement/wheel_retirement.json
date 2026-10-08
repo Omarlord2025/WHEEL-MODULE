@@ -4,10 +4,13 @@
  "creation": "2026-08-18 00:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
+ "image_field": "shape_image",
  "field_order": [
   "naming_series",
   "wheel",
   "wheel_type",
+  "shape_image",
+  "shape_image_preview",
   "job_card",
   "column_break_head",
   "check_date",
@@ -42,6 +45,21 @@
    "in_standard_filter": 1,
    "label": "Wheel Type",
    "options": "Wheel Type",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "wheel.shape_image",
+   "fieldname": "shape_image",
+   "fieldtype": "Attach Image",
+   "hidden": 1,
+   "label": "Shape Image URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "shape_image_preview",
+   "fieldtype": "Image",
+   "label": "Shape Image",
+   "options": "shape_image",
    "read_only": 1
   },
   {
@@ -85,7 +103,7 @@
    "reqd": 1
   },
   {
-   "description": "Material Issue this created — by a person or automatically at 100% consumption. Cancelled with this doc.",
+   "description": "Material Issue created when this is submitted, whether filed directly or reviewing an auto-created draft.",
    "fieldname": "stock_entry",
    "fieldtype": "Link",
    "label": "Stock Entry",

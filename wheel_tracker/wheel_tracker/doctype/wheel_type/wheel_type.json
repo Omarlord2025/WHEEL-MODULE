@@ -4,9 +4,12 @@
  "creation": "2026-08-16 00:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
+ "image_field": "shape_image",
  "field_order": [
   "spec_code",
   "shape",
+  "shape_image",
+  "shape_image_preview",
   "wheel_geometry",
   "requires_correction_factor",
   "requires_measurement",
@@ -63,6 +66,21 @@
    "label": "Shape",
    "options": "Wheel Shape",
    "reqd": 1
+  },
+  {
+   "fetch_from": "shape.shape_image",
+   "fieldname": "shape_image",
+   "fieldtype": "Attach Image",
+   "hidden": 1,
+   "label": "Shape Image URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "shape_image_preview",
+   "fieldtype": "Image",
+   "label": "Shape Image",
+   "options": "shape_image",
+   "read_only": 1
   },
   {
    "fetch_from": "shape.wheel_geometry",

@@ -43,7 +43,14 @@ app_include_js = "/assets/wheel_tracker/js/consumption_bar.js"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-doctype_js = {"Job Card": "public/js/job_card.js"}
+doctype_js = {
+	"Job Card": "public/js/job_card.js",
+	"Wheel Shape": "public/js/shape_image_live_preview.js",
+	"Wheel Type": "public/js/shape_image_live_preview.js",
+	"Wheel": "public/js/shape_image_live_preview.js",
+	"Measurement Event": "public/js/shape_image_live_preview.js",
+	"Wheel Retirement": "public/js/shape_image_live_preview.js",
+}
 doctype_list_js = {
 	"Wheel": "public/js/wheel_list.js",
 	"Measurement Event": "public/js/measurement_event_list.js",
