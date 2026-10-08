@@ -3,6 +3,7 @@
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
+from frappe.utils import flt
 
 from wheel_tracker.test_helpers import (
 	cleanup_wheel_tracker_records,
@@ -10,6 +11,7 @@ from wheel_tracker.test_helpers import (
 	make_measurement_event,
 	make_wheel,
 	make_wheel_type,
+	receive_wheel_via_material_receipt,
 )
 from wheel_tracker.wheel_tracker.doctype.wheel_type.wheel_type import calculate_wheel_volume
 
@@ -75,18 +77,6 @@ class TestMeasurementEvent(FrappeTestCase):
 		self.assertEqual(self.wheel.current_diameter, 95)
 		self.assertAlmostEqual(self.wheel.current_volume, event.confirmed_volume, places=2)
 
-	def test_submit_triggers_retirement_and_cancel_reverts_it(self):
-		# diameter == inner diameter -> exact-annulus volume is 0.
-		event = make_measurement_event(self.wheel.name, diameter=60)
-		self.wheel.reload()
-		self.assertEqual(self.wheel.status, "Retired")
-		self.assertTrue(event.triggered_retirement)
-
-		event.cancel()
-		self.wheel.reload()
-		self.assertEqual(self.wheel.status, "In Stock")
-		self.assertAlmostEqual(self.wheel.current_volume, self.wheel_type.original_volume, places=2)
-
 	def test_cancel_reverts_to_previous_measurement_not_original(self):
 		first = make_measurement_event(self.wheel.name, diameter=92)
 		second = make_measurement_event(self.wheel.name, diameter=80)
@@ -97,7 +87,12 @@ class TestMeasurementEvent(FrappeTestCase):
 
 	def test_job_card_rollup_updates_on_submit_and_cancel(self):
 		job_card = make_job_card()
-		event = make_measurement_event(self.wheel.name, job_card=job_card.name, diameter=90)
+		job_card.append("custom_wheels_used", {"wheel": self.wheel.name})
+		job_card.save()
+
+		event = make_measurement_event(self.wheel.name, diameter=90)
+		self.assertEqual(len(event.job_cards), 1)
+		self.assertEqual(event.job_cards[0].job_card, job_card.name)
 		self.assertAlmostEqual(
 			frappe.db.get_value("Job Card", job_card.name, "custom_wheel_wear_cost"), event.job_cost, places=4
 		)
@@ -105,9 +100,61 @@ class TestMeasurementEvent(FrappeTestCase):
 		event.cancel()
 		self.assertAlmostEqual(frappe.db.get_value("Job Card", job_card.name, "custom_wheel_wear_cost"), 0, places=4)
 
+	def test_single_job_card_still_gets_full_allocation(self):
+		job_card = make_job_card()
+		job_card.append("custom_wheels_used", {"wheel": self.wheel.name})
+		job_card.save()
+
+		event = make_measurement_event(self.wheel.name, diameter=90)
+
+		self.assertEqual(len(event.job_cards), 1)
+		self.assertEqual(event.job_cards[0].job_card, job_card.name)
+		self.assertAlmostEqual(event.job_cards[0].allocated_cost, event.job_cost, places=4)
+		self.assertAlmostEqual(
+			frappe.db.get_value("Job Card", job_card.name, "custom_wheel_wear_cost"), event.job_cost, places=4
+		)
+
+	def test_job_cards_split_equally_across_assignment_history(self):
+		from wheel_tracker.wheel_tracker.doctype.wheel.wheel import release_from_job_card
+
+		job_card_a = make_job_card()
+		job_card_b = make_job_card()
+
+		# Assign to Job Card A, then release it as a completed Job Card would (see
+		# release_all_wheels_for_job) — releasing this way, rather than removing the row
+		# from Job Card A's own grid and saving, leaves that Job Card Wheel row intact,
+		# which is what makes it real assignment history and not a corrected mistake.
+		job_card_a.append("custom_wheels_used", {"wheel": self.wheel.name})
+		job_card_a.save()
+		self.wheel.reload()
+		self.assertEqual(self.wheel.current_job_card, job_card_a.name)
+
+		release_from_job_card(self.wheel.name)
+		self.wheel.reload()
+		self.assertFalse(self.wheel.current_job_card)
+
+		# Reassign to Job Card B.
+		job_card_b.append("custom_wheels_used", {"wheel": self.wheel.name})
+		job_card_b.save()
+
+		event = make_measurement_event(self.wheel.name, diameter=90)
+
+		linked = {row.job_card: row.allocated_cost for row in event.job_cards}
+		self.assertEqual(set(linked), {job_card_a.name, job_card_b.name})
+		half = flt(event.job_cost) / 2
+		for cost in linked.values():
+			self.assertAlmostEqual(cost, half, places=4)
+
+		self.assertAlmostEqual(
+			frappe.db.get_value("Job Card", job_card_a.name, "custom_wheel_wear_cost"), half, places=4
+		)
+		self.assertAlmostEqual(
+			frappe.db.get_value("Job Card", job_card_b.name, "custom_wheel_wear_cost"), half, places=4
+		)
+
 
 class TestMeasurementEventBlockedForNonMeasuredShapes(FrappeTestCase):
-	"""P-series slitting wheels are tracked usable/not-usable (Wheel Usability Check),
+	"""P-series slitting wheels are tracked usable/not-usable (Wheel Retirement),
 	not by caliper measurement — Requires Measurement is unchecked on their Wheel Shape
 	(seeded), so Measurement Event must refuse to be created against them. See PRD v9."""
 
@@ -163,3 +210,64 @@ class TestMeasurementEventProfiled(FrappeTestCase):
 			self.wheel.name, diameter=84.45, inner_diameter=78.4, diamond_height=5
 		)
 		self.assertAlmostEqual(event.confirmed_volume, 3631.46, delta=1)
+
+
+class TestMeasurementEventAutoRetirement(FrappeTestCase):
+	"""Auto-retirement must now do more than flip Wheel.status — it has to create and
+	submit a real Wheel Retirement + Material Issue, and reverse both on cancel. Needs a
+	Wheel with a genuine Warehouse/Bin quantity (not the bare make_wheel() fixture used
+	elsewhere in this file), since Wheel Retirement's Material Issue draws down real
+	stock. See PRD v12."""
+
+	def setUp(self):
+		self._created = []
+		self.wheel_type = self.track(
+			make_wheel_type(original_diameter=100, original_inner_diameter=60, original_diamond_height=6)
+		)
+		self.wheel = receive_wheel_via_material_receipt(self.wheel_type.name)
+
+	def tearDown(self):
+		cleanup_wheel_tracker_records(self._created)
+
+	def track(self, doc):
+		self._created.append(doc.name)
+		return doc
+
+	def test_submit_auto_creates_retirement_and_issues_stock(self):
+		# diameter == inner diameter -> exact-annulus volume is 0 -> 100% consumption.
+		event = make_measurement_event(self.wheel.name, diameter=60)
+
+		self.wheel.reload()
+		self.assertEqual(self.wheel.status, "Retired")
+		self.assertTrue(event.triggered_retirement)
+		self.assertTrue(event.auto_retirement)
+
+		retirement = frappe.get_doc("Wheel Retirement", event.auto_retirement)
+		self.assertEqual(retirement.docstatus, 1)
+		self.assertEqual(retirement.wheel, self.wheel.name)
+		self.assertTrue(retirement.stock_entry)
+		self.assertEqual(frappe.db.get_value("Stock Entry", retirement.stock_entry, "docstatus"), 1)
+		self.assertEqual(frappe.db.get_value("Stock Entry", retirement.stock_entry, "purpose"), "Material Issue")
+
+		bin_qty = frappe.db.get_value(
+			"Bin", {"item_code": self.wheel_type.item, "warehouse": "_Test Warehouse - _TC"}, "actual_qty"
+		)
+		self.assertEqual(bin_qty, 0)
+
+	def test_cancel_reverses_retirement_and_stock_entry(self):
+		event = make_measurement_event(self.wheel.name, diameter=60)
+		retirement_name = event.auto_retirement
+		stock_entry_name = frappe.db.get_value("Wheel Retirement", retirement_name, "stock_entry")
+
+		event.cancel()
+
+		self.wheel.reload()
+		self.assertEqual(self.wheel.status, "In Stock")
+		self.assertAlmostEqual(self.wheel.current_volume, self.wheel_type.original_volume, places=2)
+		self.assertEqual(frappe.db.get_value("Wheel Retirement", retirement_name, "docstatus"), 2)
+		self.assertEqual(frappe.db.get_value("Stock Entry", stock_entry_name, "docstatus"), 2)
+
+		bin_qty = frappe.db.get_value(
+			"Bin", {"item_code": self.wheel_type.item, "warehouse": "_Test Warehouse - _TC"}, "actual_qty"
+		)
+		self.assertEqual(bin_qty, 1)

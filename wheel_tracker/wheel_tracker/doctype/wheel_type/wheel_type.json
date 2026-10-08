@@ -24,6 +24,7 @@
   "profile_segments",
   "section_break_volume",
   "auto_calc_volume",
+  "usable_volume_floor_percent",
   "column_break_volume",
   "original_volume",
   "usable_original_volume",
@@ -84,7 +85,7 @@
   },
   {
    "default": "1",
-   "description": "Unchecked (from the Shape) means Wheels of this Type are tracked as simply usable/not-usable via Wheel Usability Check, not caliper measurement — see PRD v9.",
+   "description": "Unchecked means Wheels of this Type use Wheel Retirement, not caliper measurement.",
    "fetch_from": "shape.requires_measurement",
    "fieldname": "requires_measurement",
    "fieldtype": "Check",
@@ -121,7 +122,7 @@
    "label": "Disabled"
   },
   {
-   "description": "The full spec string from the legacy sheet, preserved as-is for reference/search. Grit/concentration/bond codes are often concatenated into this string in ways that aren't reliably auto-parseable into the structured fields below \u2014 see PRD v3.",
+   "description": "Full spec string from the legacy sheet, kept as-is for reference/search.",
    "fieldname": "legacy_spec_name",
    "fieldtype": "Data",
    "label": "Legacy Spec Name"
@@ -150,7 +151,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "description": "For flat/straight shapes (1A1, P-series), enter this directly \u2014 it's the wheel's full height/width. For profiled shapes it's read-only, auto-set to the sum of the Profile Segments' heights below.",
+   "description": "Flat shapes: enter directly. Profiled shapes: read-only, sum of Profile Segments below.",
    "fieldname": "original_diamond_height",
    "fieldtype": "Float",
    "label": "Original Diamond Layer Height (mm)",
@@ -168,7 +169,7 @@
   },
   {
    "depends_on": "eval:doc.requires_correction_factor",
-   "description": "The abrasive band's profile, as one or more conical segments walked from the (wearing) outer diameter inward to the (constant) bore. One row = a simple single-bevel shape like 1V1. Two rows = a compound/stepped shape like 11V9 or 12V9 (a main cone plus a separate chamfer near the bore, each with its own angle) \u2014 order matters, first row starts at the outer face. See PRD v7.",
+   "description": "One row per conical segment, outer face first \u2014 most wheels (1V1, 12V9) need just one.",
    "fieldname": "profile_segments",
    "fieldtype": "Table",
    "label": "Profile Segments",
@@ -181,24 +182,31 @@
   },
   {
    "default": "1",
-   "description": "When checked, Original Volume is recalculated from the dimensions above whenever they change. Uncheck to enter a manufacturer-specified value instead.",
+   "description": "Uncheck to enter a manufacturer-specified Original Volume instead of computing it.",
    "fieldname": "auto_calc_volume",
    "fieldtype": "Check",
    "label": "Auto-Calculate Original Volume"
+  },
+  {
+   "description": "Overrides the global Usable Volume Floor % for this Wheel Type. Blank uses the default.",
+   "fieldname": "usable_volume_floor_percent",
+   "fieldtype": "Percent",
+   "label": "Usable Volume Floor % (override)",
+   "precision": "2"
   },
   {
    "fieldname": "column_break_volume",
    "fieldtype": "Column Break"
   },
   {
-   "description": "Flat shapes: (pi/4) x (D\u00b2 - d\u00b2) x Diamond Height. Profiled shapes: exact conical-frustum-ring volume, summed across the Profile Segments below. Editable \u2014 override if a manufacturer spec sheet disagrees.",
+   "description": "Auto-computed from the dimensions above; editable if a manufacturer spec sheet disagrees.",
    "fieldname": "original_volume",
    "fieldtype": "Float",
    "label": "Original Volume (mm\u00b3)",
    "precision": "3"
   },
   {
-   "description": "Original Volume x (1 - Usable Volume Floor %). The floor is never counted as usable.",
+   "description": "Original Volume x (1 - Usable Volume Floor %) — the floor is never usable.",
    "fieldname": "usable_original_volume",
    "fieldtype": "Float",
    "label": "Usable Original Volume (mm\u00b3)",
@@ -277,7 +285,7 @@
   },
   {
    "default": "0",
-   "description": "Set by the daily reorder check. Cleared automatically once stock is replenished above the reorder point, so the next dip alerts again.",
+   "description": "Set by the daily reorder check; clears once stock is replenished above the reorder point.",
    "fieldname": "reorder_alert_active",
    "fieldtype": "Check",
    "label": "Reorder Alert Active",

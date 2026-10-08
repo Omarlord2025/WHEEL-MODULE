@@ -5,7 +5,13 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from wheel_tracker.job_card_integration import release_all_wheels_for_job, sync_wheel_assignments
-from wheel_tracker.test_helpers import cleanup_wheel_tracker_records, make_job_card, make_wheel, make_wheel_type
+from wheel_tracker.test_helpers import (
+	cleanup_wheel_tracker_records,
+	make_job_card,
+	make_measurement_event,
+	make_wheel,
+	make_wheel_type,
+)
 
 
 class TestJobCardIntegration(FrappeTestCase):
@@ -73,6 +79,33 @@ class TestJobCardIntegration(FrappeTestCase):
 
 		wheel.reload()
 		self.assertEqual(wheel.status, "In Stock")
+
+	def test_wheel_wear_cost_rolls_up_into_work_order_additional_operating_cost(self):
+		wheel = make_wheel(self.wheel_type.name)
+		job_card = make_job_card()
+		job_card.append("custom_wheels_used", {"wheel": wheel.name})
+		job_card.save()
+		event = make_measurement_event(wheel.name, diameter=90)
+
+		work_order = frappe.db.get_value("Job Card", job_card.name, "work_order")
+		additional_operating_cost, total_operating_cost = frappe.db.get_value(
+			"Work Order", work_order, ["additional_operating_cost", "total_operating_cost"]
+		)
+		self.assertAlmostEqual(additional_operating_cost, event.job_cost, places=4)
+		self.assertGreaterEqual(total_operating_cost, additional_operating_cost)
+
+	def test_cancelling_measurement_event_reduces_work_order_cost(self):
+		wheel = make_wheel(self.wheel_type.name)
+		job_card = make_job_card()
+		job_card.append("custom_wheels_used", {"wheel": wheel.name})
+		job_card.save()
+		event = make_measurement_event(wheel.name, diameter=90)
+		work_order = frappe.db.get_value("Job Card", job_card.name, "work_order")
+
+		event.cancel()
+
+		additional_operating_cost = frappe.db.get_value("Work Order", work_order, "additional_operating_cost")
+		self.assertAlmostEqual(additional_operating_cost, 0, places=4)
 
 	def test_sync_hook_releases_wheels_when_status_is_completed(self):
 		"""Job Card's own controller drives status through set_status() based on real

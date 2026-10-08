@@ -106,7 +106,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "description": "Set from the latest Measurement Event's Confirmed Volume, computed automatically from its diameter reading (see Wheel Type / PRD v6).",
+   "description": "Auto-set from the latest Measurement Event's Confirmed Volume.",
    "fieldname": "current_volume",
    "fieldtype": "Float",
    "label": "Current Volume (mm\u00b3)",

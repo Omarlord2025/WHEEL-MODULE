@@ -27,7 +27,7 @@ class MeasurementEvent(Document):
 			frappe.throw(
 				_(
 					"{0} Wheels are tracked as usable/not-usable, not by caliper measurement "
-					"— use Wheel Usability Check instead."
+					"— use Wheel Retirement instead."
 				).format(wheel_type.shape)
 			)
 
@@ -36,7 +36,7 @@ class MeasurementEvent(Document):
 			self.diameter, inner_diameter, height, wheel_type.requires_correction_factor, segments
 		)
 
-		usable_fraction = get_usable_volume_fraction()
+		usable_fraction = get_usable_volume_fraction(wheel_type.usable_volume_floor_percent)
 		self.usable_volume = flt(self.confirmed_volume) * usable_fraction
 		self.consumed_volume = flt(wheel_type.usable_original_volume) - flt(self.usable_volume)
 		self.consumption_percent = (
@@ -56,6 +56,61 @@ class MeasurementEvent(Document):
 
 		self.cost_per_mm3 = flt(wheel_type.cost_per_mm3)
 		self.job_cost = flt(self.incremental_consumed_volume) * self.cost_per_mm3
+
+		self.derive_job_cards()
+
+	def derive_job_cards(self):
+		"""Auto-derive which Job Card(s) this measurement's incremental wear applies to,
+		from the Wheel's real assignment history since its previous submitted event — a
+		Wheel can be assigned/released across several Job Cards between two measurements
+		(see PRD v12), so job_cost is split equally across all of them. Recomputed on
+		every save (idempotent); frozen once submitted, same as confirmed_volume et al."""
+		if self.docstatus == 1:
+			return
+
+		since = self.get_job_card_history_cutoff()
+		job_cards = self.get_job_cards_since(since)
+
+		self.set("job_cards", [])
+		if not job_cards:
+			return
+
+		share = flt(self.job_cost) / len(job_cards)
+		for job_card in job_cards:
+			self.append("job_cards", {"job_card": job_card, "allocated_cost": share})
+
+	def get_job_card_history_cutoff(self):
+		"""Datetime since which Job Card Wheel history counts toward this event — the
+		Wheel's previous submitted Measurement Event's measurement_date, or its
+		received_on/creation if this is the Wheel's first measurement."""
+		previous = get_previous_submitted_event(self.wheel, exclude=self.name)
+		if previous and previous.get("measurement_date"):
+			return previous["measurement_date"]
+
+		received_on, creation = frappe.db.get_value("Wheel", self.wheel, ["received_on", "creation"])
+		return received_on or creation
+
+	def get_job_cards_since(self, since) -> list:
+		"""Distinct Job Cards this Wheel was assigned to (per Job Card Wheel rows) at or
+		after `since`, oldest first. Falls back to the Wheel's current_job_card if history
+		is empty but the Wheel is presently In Use (defensive — assignment always creates
+		a Job Card Wheel row first, so this should not normally be needed)."""
+		from wheel_tracker.job_card_integration import WHEEL_ROWS_FILTERS
+
+		rows = frappe.get_all(
+			"Job Card Wheel",
+			filters={"wheel": self.wheel, "assigned_on": [">=", since], **WHEEL_ROWS_FILTERS},
+			fields=["parent"],
+			order_by="assigned_on asc",
+		)
+		job_cards = list(dict.fromkeys(row.parent for row in rows))
+
+		if not job_cards:
+			current_job_card = frappe.db.get_value("Wheel", self.wheel, "current_job_card")
+			if current_job_card:
+				job_cards = [current_job_card]
+
+		return job_cards
 
 	def _volume_inputs(self, wheel_type):
 		"""(inner_diameter, height, segments) to feed calculate_wheel_volume() alongside
@@ -87,11 +142,54 @@ class MeasurementEvent(Document):
 
 	def on_submit(self):
 		self.apply_to_wheel()
+		self.create_auto_retirement()
 		self.update_job_card_rollup()
 
 	def on_cancel(self):
+		self.cancel_auto_retirement()
 		self.revert_from_wheel()
 		self.update_job_card_rollup()
+
+	def create_auto_retirement(self):
+		"""If apply_to_wheel() just auto-retired the Wheel (see Wheel.check_auto_retirement),
+		create+submit a real Wheel Retirement so the Wheel is actually issued out of
+		ERPNext's stock ledger via a Material Issue — not just flagged Retired in Wheel
+		Tracker (see PRD v12). Reuses Wheel Retirement's own on_submit
+		(retire_wheel() + create_retirement_stock_entry()) rather than reimplementing
+		either; retire_wheel() is a no-op here since the Wheel is already Retired, so this
+		does not re-save the Wheel a second time. Must run strictly after apply_to_wheel()'s
+		own wheel.save() has returned — creating a new top-level document here is safe,
+		unlike doing this from inside Wheel.validate() itself, which would recurse into the
+		save() still in progress. No-op if this event didn't trigger retirement."""
+		if not self.triggered_retirement:
+			return
+
+		linked_job_cards = [row.job_card for row in self.get("job_cards") or []]
+
+		retirement = frappe.new_doc("Wheel Retirement")
+		retirement.wheel = self.wheel
+		retirement.job_card = linked_job_cards[0] if len(linked_job_cards) == 1 else None
+		retirement.check_date = frappe.utils.now_datetime()
+		retirement.checked_by = self.measured_by
+		retirement.retirement_reason = frappe.db.get_value("Wheel", self.wheel, "retirement_reason")
+		retirement.insert(ignore_permissions=True)
+		retirement.submit()
+
+		self.db_set("auto_retirement", retirement.name)
+
+	def cancel_auto_retirement(self):
+		"""Mirror of create_auto_retirement() for on_cancel(): if this event auto-created a
+		Wheel Retirement, cancel it too — that reverses its Material Issue Stock Entry via
+		Wheel Retirement's own on_cancel (reinstate_wheel() + cancelling the Stock Entry),
+		keeping ERPNext's real stock ledger in step with the Wheel being un-retired. Runs
+		before revert_from_wheel() so the retirement paperwork and stock movement are undone
+		first, then the Wheel's own measured dimensions/status are restored. No-op if no
+		auto_retirement was recorded, or if it's already been cancelled/deleted independently."""
+		if not self.auto_retirement or not frappe.db.exists("Wheel Retirement", self.auto_retirement):
+			return
+		retirement = frappe.get_doc("Wheel Retirement", self.auto_retirement)
+		if retirement.docstatus == 1:
+			retirement.cancel()
 
 	def apply_to_wheel(self):
 		wheel = frappe.get_doc("Wheel", self.wheel)
@@ -129,11 +227,13 @@ class MeasurementEvent(Document):
 		wheel.save(ignore_permissions=True)
 
 	def update_job_card_rollup(self):
-		if not self.job_card:
-			return
+		"""Re-sum every Job Card this event's wear was split across (see derive_job_cards) —
+		called on both submit and cancel; update_job_card_wheel_cost() always re-sums from
+		scratch, so calling it once per linked Job Card here is correct and idempotent."""
 		from wheel_tracker.job_card_integration import update_job_card_wheel_cost
 
-		update_job_card_wheel_cost(self.job_card)
+		for job_card in {row.job_card for row in self.get("job_cards") or []}:
+			update_job_card_wheel_cost(job_card)
 
 
 def get_last_consumed_volume(wheel: str, exclude: str | None = None) -> float:
@@ -179,7 +279,7 @@ def get_previous_submitted_event(wheel: str, exclude: str | None = None):
 	rows = frappe.get_all(
 		"Measurement Event",
 		filters=filters,
-		fields=["diameter", "inner_diameter", "diamond_height", "confirmed_volume"],
+		fields=["diameter", "inner_diameter", "diamond_height", "confirmed_volume", "measurement_date"],
 		order_by="measurement_date desc, creation desc",
 		limit=1,
 	)

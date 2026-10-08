@@ -16,6 +16,7 @@ from wheel_tracker.wheel_tracker.doctype.wheel_tracker_settings.wheel_tracker_se
 class WheelType(Document):
 	def validate(self):
 		self.validate_dimensions()
+		ensure_item_is_serialized(self.item)
 
 		if self.requires_correction_factor:
 			self.original_diamond_height = sum(flt(s.height) for s in self.profile_segments)
@@ -29,7 +30,9 @@ class WheelType(Document):
 				self.profile_segments,
 			)
 
-		self.usable_original_volume = flt(self.original_volume) * get_usable_volume_fraction()
+		self.usable_original_volume = flt(self.original_volume) * get_usable_volume_fraction(
+			self.usable_volume_floor_percent
+		)
 		self.cost_per_mm3 = (
 			flt(self.unit_cost) / self.usable_original_volume if self.usable_original_volume else 0
 		)
@@ -45,6 +48,19 @@ class WheelType(Document):
 					frappe.throw(_("Row {0}: Profile Segment Angle and Height must both be greater than zero.").format(row.idx))
 		elif flt(self.original_diamond_height) <= 0:
 			frappe.throw(_("Original Diamond Layer Height must be greater than zero."))
+
+
+def ensure_item_is_serialized(item_code: str) -> None:
+	"""Make sure a Wheel Type's linked Item is serialized, so every physical Wheel gets
+	a matching ERPNext Serial No and real stock movements against it actually retire/
+	move the Wheel (see PRD v10). Reuses Item's own validate()/cant_change() guard —
+	if the Item already has submitted stock transactions that block the change, that
+	throws ERPNext's own clear error rather than this re-deriving the safety check."""
+	if not item_code or frappe.db.get_value("Item", item_code, "has_serial_no"):
+		return
+	item = frappe.get_doc("Item", item_code)
+	item.has_serial_no = 1
+	item.save(ignore_permissions=True)
 
 
 def calculate_wheel_volume(

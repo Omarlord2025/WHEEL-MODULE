@@ -13,8 +13,8 @@
   "check_date",
   "checked_by",
   "section_break_verdict",
-  "usable",
   "retirement_reason",
+  "stock_entry",
   "amended_from"
  ],
  "fields": [
@@ -22,11 +22,11 @@
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "label": "Series",
-   "options": "UC-.YYYY.-.#####",
+   "options": "WR-.YYYY.-.#####",
    "reqd": 1
   },
   {
-   "description": "Any Wheel — most useful for shapes that don't Require Measurement (see Wheel Shape), but usable as a manual retirement/reinstatement record for any wheel.",
+   "description": "Any Wheel, not just non-measured shapes — e.g. one damaged before its volume runs out.",
    "fieldname": "wheel",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -61,44 +61,43 @@
    "fieldname": "check_date",
    "fieldtype": "Datetime",
    "in_list_view": 1,
-   "label": "Check Date",
+   "label": "Retirement Date",
    "reqd": 1
   },
   {
    "default": "__user",
    "fieldname": "checked_by",
    "fieldtype": "Link",
-   "label": "Checked By",
+   "label": "Retired By",
    "options": "User",
    "reqd": 1
   },
   {
    "fieldname": "section_break_verdict",
    "fieldtype": "Section Break",
-   "label": "Verdict"
+   "label": "Retirement"
   },
   {
-   "default": "1",
-   "description": "Checked = Wheel is usable (In Stock if not already In Use). Unchecked = Wheel is retired immediately on submit.",
-   "fieldname": "usable",
-   "fieldtype": "Check",
-   "in_list_view": 1,
-   "label": "Usable"
-  },
-  {
-   "depends_on": "eval:!doc.usable",
-   "description": "Why the Wheel isn't usable, e.g. chipped, cracked, worn past the point of safe use.",
+   "description": "Why the Wheel is being retired, e.g. chipped, cracked, worn past the point of safe use.",
    "fieldname": "retirement_reason",
    "fieldtype": "Small Text",
    "label": "Reason",
-   "mandatory_depends_on": "eval:!doc.usable"
+   "reqd": 1
+  },
+  {
+   "description": "Material Issue this created — by a person or automatically at 100% consumption. Cancelled with this doc.",
+   "fieldname": "stock_entry",
+   "fieldtype": "Link",
+   "label": "Stock Entry",
+   "options": "Stock Entry",
+   "read_only": 1
   },
   {
    "fieldname": "amended_from",
    "fieldtype": "Link",
    "label": "Amended From",
    "no_copy": 1,
-   "options": "Wheel Usability Check",
+   "options": "Wheel Retirement",
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
@@ -106,10 +105,10 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-08-18 00:00:00.000000",
+ "modified": "2026-08-20 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Wheel Tracker",
- "name": "Wheel Usability Check",
+ "name": "Wheel Retirement",
  "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
