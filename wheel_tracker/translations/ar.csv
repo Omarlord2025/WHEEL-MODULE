@@ -167,5 +167,5 @@
 "Language","اللغة"
 "English","الإنجليزية"
 "Arabic","العربية"
-"Switches the whole site's Desk language — field names, doctype names, and messages — for every user, immediately on save.","يُبدِّل لغة واجهة الموقع بالكامل — أسماء الحقول وأنواع المستندات والرسائل — لجميع المستخدمين، فوراً عند الحفظ."
+"Switches Wheel Tracker's own field names, doctype names, and messages to Arabic for everyone — without changing System Settings, any User's own language, or anything outside this module.","يُبدِّل أسماء حقول وأنواع مستندات ورسائل Wheel Tracker فقط إلى العربية لجميع المستخدمين — دون تغيير إعدادات النظام أو لغة أي مستخدم الخاصة به أو أي شيء خارج هذا الموديول."
 "Language updated — reloading the page...","تم تحديث اللغة — جارٍ إعادة تحميل الصفحة..."

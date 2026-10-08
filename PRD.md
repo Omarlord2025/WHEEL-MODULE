@@ -1,15 +1,29 @@
 # PRD — Resharpening Wheel (Diamond/CBN Wheel) Tracking Module
 **App target:** ERPNext v15 / Frappe Framework, hardcoded custom app (code-based doctypes, version-controlled)
 **Company:** CNC Leaders
-**Status:** Draft v18 — a real language switch, surfaced on Wheel Tracker Settings
+**Status:** Draft v19 — the language switch redone to be genuinely scoped to this module alone
 
 ---
 
-## v18 — a real language switch, this time on Wheel Tracker Settings
+## v19 — v18's language switch was rejected and rebuilt to actually be scoped
+
+v18 (below) shipped a `Wheel Tracker Settings.language` field whose `on_update()` wrote `System Settings.language` and bulk-updated every row in `tabUser`. The customer rejected this immediately and specifically: *"the problem is it changes the entire system which IS WRONG... do not scope it to the user who changed it and do not RTL the entire system... it should change independently."* Confirmed live: it had actually forced every real account (including the customer's own) and the site default to Arabic — reverted by hand via direct SQL (`update tabUser set language='en' where language='ar'`, `System Settings.language` back to `en`) as part of this fix.
+
+**The real fix never touches `System Settings` or `tabUser` at all.** Every Desk label, breadcrumb, and workspace title Frappe renders funnels through one global client-side function — `window.__`/`frappe._` (`frappe/public/js/frappe/translate.js`), which checks `frappe._messages[txt]` (the session's loaded dictionary) and falls back to the original string if nothing matches. `public/js/wheel_tracker_language.js` (added to `app_include_js`, so it loads on every Desk page for every user) wraps that one function: on load it asks a new whitelisted method, `wheel_tracker.language_switch.get_language_state()`, for the current flag and this module's own `ar.csv` dictionary, then its replacement `__()` intercepts a string **only if it's an exact key in that dictionary** — every other string, from core Frappe, ERPNext, or any other app, falls straight through to the original function untouched. This is what makes it genuinely independent of System Settings, of any particular User's own language, and of who saved the setting: nothing is written anywhere except the one flag on the Single itself, and every browser tab (anyone's) just asks fresh on its own next page load. `wheel_tracker_settings.py`'s controller is back to a bare `pass` — the field is inert data now, read only by the API. `public/js/wheel_tracker_settings.js` still reloads the current tab after a save that changed the field, purely so the person who just flipped it sees the change immediately — that reload has no effect on anyone else, who'd pick up the new state on their own next load regardless.
+
+No RTL direction change anywhere — this only ever substitutes the translated string Frappe would already render in that same spot; it doesn't touch `dir`, layout, or anything else.
+
+85 tests passing (unchanged), clean migrate, verified via `bench execute`: toggling `Wheel Tracker Settings.language` to Arabic and back no longer changes `System Settings.language` or any `tabUser` row (asserted directly), while `get_language_state()` still returns the correct dictionary and `frappe._("Wheel", lang="ar")`-equivalent lookups resolve correctly through the new path.
+
+---
+
+## v18 — a real language switch, this time on Wheel Tracker Settings (superseded by v19 — do not reintroduce)
 
 After v17 removed both language-toggle workspace buttons by customer request, the customer asked for the capability back — but as a real settings field, switchable "from the settings of the wheel [tracker] itself," not a floating workspace button, and covering every doctype/field name across the whole module.
 
 **`Wheel Tracker Settings` (the app's own Single doctype) gets a `language` field** (Select: English/Arabic). Its `on_update()` writes `System Settings.language` and bulk-updates every row in `tabUser` to match, then clears cache — **Frappe has no concept of a per-module display language**; switching is always whole-site and every-user, so there's no way to show Arabic only inside Wheel Tracker's own doctypes while the rest of Desk stays English, and no point pretending otherwise. In practice, since the user's own session language (`User.language`) otherwise overrides the site default, both have to be written for the switch to actually take effect for everyone immediately rather than only for new/guest sessions. A client script (`public/js/wheel_tracker_settings.js`) forces a full page reload right after a save that actually changed the field, since Desk loads its translation dictionary once per full boot, not reactively per-save.
+
+**Rejected by the customer — see v19 above.** The premise that this had to be whole-site/every-user was wrong: Frappe's rendering funnels through one interceptable client-side function, so a module-scoped override was possible after all.
 
 **Audited `translations/ar.csv` (v15) for real gaps**, not just trusted it was still complete: wrote a script comparing every DocType name, field label, and Select option across all of this app's own doctype JSON files against the CSV's source strings. Found 18 genuinely missing (`Amended From`, `Code`, `Consumed Volume (mm³)`, `Description`, `Disabled`, `Item`, `Material`, `Reason`, `Shape Code`, `Shape Image`, `Shape Image URL`, `Status`, `Stock Entry`, `Upload Shape Photo`, `Warehouse`, plus the Number Card's full label `"Wheels Nearing Retirement (>=80%)"`, a report column `"Date"`, and the new field's own strings) and added them — deliberately skipping only the two naming-series format patterns (`ME-.YYYY.-.#####` etc., not real text) and the generic `"Series"` label.
 

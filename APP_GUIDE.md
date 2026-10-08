@@ -107,11 +107,12 @@ are tracked as simply usable/not-usable instead. Use Wheel Retirement for those.
 
 ## 11. Switching Between English and Arabic
 
-Open **Wheel Tracker Settings** and set **Language** to English or Arabic, then save.
-Every field name, doctype name, and system message across the whole site — not just
-Wheel Tracker — switches for every user the moment it's saved, and the page reloads
-automatically to show it. There's no per-person override: this is one shared switch for
-everyone, by design, since the shop floor all works in the same language at once.
+Open **Wheel Tracker Settings** and set **Language** to English or Arabic, then save —
+your own page reloads right away to show it. This only switches Wheel Tracker's own
+field names, doctype names, and messages; it does not touch System Settings or anyone's
+personal language preference, and the rest of Desk (Sales Orders, Customers, everything
+outside this module) is completely unaffected. Everyone sees the same choice the next
+time they load a page, regardless of their own language setting elsewhere in the system.
 
 ## 12. Reading the Consumption % Bar
 

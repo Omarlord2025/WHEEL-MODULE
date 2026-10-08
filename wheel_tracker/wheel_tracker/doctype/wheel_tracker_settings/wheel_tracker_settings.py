@@ -5,26 +5,9 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import flt
 
-LANGUAGE_CODES = {"English": "en", "Arabic": "ar"}
-
 
 class WheelTrackerSettings(Document):
-	def on_update(self):
-		self.apply_language()
-
-	def apply_language(self):
-		"""Frappe has no concept of a per-module display language — switching it is
-		always a whole-site, every-user setting. This Single is just where staff are
-		meant to flip that switch instead of leaving it buried in System Settings, so
-		flipping it here deliberately touches System Settings and every User row.
-		Re-applied on every save (idempotent) rather than only when self.language looks
-		changed, so a save interrupted partway through a prior rollout still finishes."""
-		lang_code = LANGUAGE_CODES.get(self.language)
-		if not lang_code:
-			return
-		frappe.db.set_single_value("System Settings", "language", lang_code)
-		frappe.db.sql("update `tabUser` set language = %s", lang_code)
-		frappe.clear_cache()
+	pass
 
 
 def get_usable_volume_fraction(floor_percent_override: float | None = None) -> float:
