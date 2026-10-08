@@ -184,6 +184,7 @@ def get_or_create_item(item_code: str, shape: str, material: str) -> str:
 			"item_group": "All Item Groups",
 			"stock_uom": "Nos",
 			"is_stock_item": 1,
+			"has_serial_no": 1,
 		}
 	).insert(ignore_permissions=True)
 	return item_code

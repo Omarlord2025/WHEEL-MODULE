@@ -8,7 +8,7 @@
   "naming_series",
   "wheel",
   "wheel_type",
-  "job_card",
+  "job_cards",
   "column_break_head",
   "measurement_date",
   "measured_by",
@@ -30,6 +30,7 @@
   "cost_per_mm3",
   "job_cost",
   "triggered_retirement",
+  "auto_retirement",
   "amended_from"
  ],
  "fields": [
@@ -59,12 +60,11 @@
    "read_only": 1
   },
   {
-   "fieldname": "job_card",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Job Card",
-   "options": "Job Card"
+   "fieldname": "job_cards",
+   "fieldtype": "Table",
+   "label": "Job Cards",
+   "options": "Measurement Event Job Card",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_head",
@@ -117,7 +117,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "description": "Computed automatically from the Diameter reading above, holding Inner Diameter/Diamond Layer Height/Angle at the Wheel Type's constant original values (see PRD v6). This is the value used for all wear and cost calculations.",
+   "description": "Auto-computed from the Diameter reading; used for all wear and cost calculations.",
    "fieldname": "confirmed_volume",
    "fieldtype": "Float",
    "label": "Confirmed Volume (mm\u00b3)",
@@ -171,7 +171,7 @@
    "read_only": 1
   },
   {
-   "description": "(Wheel Type's Original Diameter \u2212 Diameter) \u00f7 2 \u2014 the radial amount of wheel lost, in mm. A simple caliper-only cross-check against the volume-based wear figures above.",
+   "description": "Radial amount of wheel lost \u2014 a caliper-only cross-check against the volume-based figures above.",
    "fieldname": "radial_wear",
    "fieldtype": "Float",
    "label": "Radial Wear (mm)",
@@ -193,7 +193,7 @@
    "read_only": 1
   },
   {
-   "description": "Incremental Consumed Volume x Cost per mm\u00b3. Rolled up to the linked Job Card on submit.",
+   "description": "Incremental Consumed Volume x Cost per mm\u00b3, split across the Job Cards below.",
    "fieldname": "job_cost",
    "fieldtype": "Currency",
    "label": "Job Cost",
@@ -205,6 +205,16 @@
    "fieldtype": "Check",
    "hidden": 1,
    "label": "Triggered Retirement",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.triggered_retirement",
+   "description": "Wheel Retirement this event auto-created when it pushed the Wheel to 100% consumption.",
+   "fieldname": "auto_retirement",
+   "fieldtype": "Link",
+   "label": "Auto-Created Wheel Retirement",
+   "no_copy": 1,
+   "options": "Wheel Retirement",
    "read_only": 1
   },
   {

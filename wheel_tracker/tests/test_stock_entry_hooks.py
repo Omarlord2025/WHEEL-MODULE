@@ -53,7 +53,6 @@ class TestStockEntryHooks(FrappeTestCase):
 	def test_non_material_receipt_purpose_creates_no_wheels(self):
 		from erpnext.stock.doctype.stock_entry.stock_entry_utils import make_stock_entry
 
-		# Material Transfer needs stock to already exist at the source warehouse.
 		make_stock_entry(
 			item_code=self.wheel_type.item,
 			qty=2,
@@ -61,17 +60,58 @@ class TestStockEntryHooks(FrappeTestCase):
 			purpose="Material Receipt",
 		)
 		before = frappe.db.count("Wheel", {"wheel_type": self.wheel_type.name})
+		wheel_name = frappe.db.get_value("Wheel", {"wheel_type": self.wheel_type.name}, "name")
 
-		make_stock_entry(
-			item_code=self.wheel_type.item,
-			qty=1,
-			from_warehouse="_Test Warehouse - _TC",
-			to_warehouse="_Test Warehouse 1 - _TC",
-			purpose="Material Transfer",
+		# Once the Item is serialized (every Wheel Type's Item now is — see PRD v10), a
+		# Material Transfer needs an explicit serial, same as any other movement.
+		se = frappe.get_doc(
+			{
+				"doctype": "Stock Entry",
+				"purpose": "Material Transfer",
+				"stock_entry_type": "Material Transfer",
+				"company": "_Test Company",
+				"items": [
+					{
+						"item_code": self.wheel_type.item,
+						"s_warehouse": "_Test Warehouse - _TC",
+						"t_warehouse": "_Test Warehouse 1 - _TC",
+						"qty": 1,
+						"serial_no": wheel_name,
+						"use_serial_batch_fields": 1,
+					}
+				],
+			}
 		)
+		se.insert(ignore_permissions=True)
+		se.submit()
 
 		after = frappe.db.count("Wheel", {"wheel_type": self.wheel_type.name})
 		self.assertEqual(before, after)
+
+	def test_wheel_name_equals_serial_no_name(self):
+		from erpnext.stock.doctype.stock_entry.stock_entry_utils import make_stock_entry
+
+		make_stock_entry(
+			item_code=self.wheel_type.item, qty=1, to_warehouse="_Test Warehouse - _TC", purpose="Material Receipt"
+		)
+		wheel = frappe.get_last_doc("Wheel", filters={"wheel_type": self.wheel_type.name})
+		self.assertTrue(frappe.db.exists("Serial No", wheel.name))
+		self.assertEqual(frappe.db.get_value("Serial No", wheel.name, "item_code"), self.wheel_type.item)
+
+	def test_bin_actual_qty_matches_wheels_in_stock_count(self):
+		from erpnext.stock.doctype.stock_entry.stock_entry_utils import make_stock_entry
+
+		make_stock_entry(
+			item_code=self.wheel_type.item, qty=4, to_warehouse="_Test Warehouse - _TC", purpose="Material Receipt"
+		)
+		wheels_in_stock = frappe.db.count(
+			"Wheel", {"wheel_type": self.wheel_type.name, "status": "In Stock"}
+		)
+		bin_qty = frappe.db.get_value(
+			"Bin", {"item_code": self.wheel_type.item, "warehouse": "_Test Warehouse - _TC"}, "actual_qty"
+		)
+		self.assertEqual(wheels_in_stock, 4)
+		self.assertEqual(bin_qty, 4)
 
 	def test_unrelated_item_is_ignored(self):
 		from erpnext.stock.doctype.stock_entry.stock_entry_utils import make_stock_entry

@@ -85,6 +85,20 @@ def make_measurement_event(wheel_name: str, submit: bool = True, **kwargs) -> "f
 	return doc
 
 
+def receive_wheel_via_material_receipt(
+	wheel_type_name: str, warehouse: str = "_Test Warehouse - _TC"
+) -> "frappe.model.document.Document":
+	"""Bring a real Wheel into stock via an actual Material Receipt Stock Entry — needed
+	by any test that goes on to issue the Wheel back out (a Wheel Retirement's Material
+	Issue, auto- or manually-triggered), since that requires genuine Bin quantity to draw
+	down, not just a Wheel doc with `warehouse` set by hand via make_wheel()."""
+	from erpnext.stock.doctype.stock_entry.stock_entry_utils import make_stock_entry
+
+	wheel_type = frappe.get_doc("Wheel Type", wheel_type_name)
+	make_stock_entry(item_code=wheel_type.item, qty=1, to_warehouse=warehouse, purpose="Material Receipt")
+	return frappe.get_last_doc("Wheel", filters={"wheel_type": wheel_type_name})
+
+
 def make_job_card() -> "frappe.model.document.Document":
 	"""Build a real, fully valid Job Card via ERPNext's own manufacturing test fixtures
 	(BOM -> Work Order -> auto-created Job Card). Heavier than a fake doc, but Job Card
@@ -100,11 +114,11 @@ def make_job_card() -> "frappe.model.document.Document":
 
 
 def cleanup_wheel_tracker_records(wheel_type_names: list[str]):
-	"""Delete Measurement Events, Wheel Usability Checks, Wheels, and Wheel Types created
+	"""Delete Measurement Events, Wheel Retirements, Wheels, and Wheel Types created
 	for a test, in FK order."""
 	for wheel_type_name in wheel_type_names:
 		for wheel_name in frappe.get_all("Wheel", filters={"wheel_type": wheel_type_name}, pluck="name"):
-			for doctype in ("Measurement Event", "Wheel Usability Check"):
+			for doctype in ("Measurement Event", "Wheel Retirement"):
 				for doc_name in frappe.get_all(doctype, filters={"wheel": wheel_name}, pluck="name"):
 					doc = frappe.get_doc(doctype, doc_name)
 					if doc.docstatus == 1:

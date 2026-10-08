@@ -26,7 +26,7 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/wheel_tracker/css/wheel_tracker.css"
-# app_include_js = "/assets/wheel_tracker/js/wheel_tracker.js"
+app_include_js = "/assets/wheel_tracker/js/consumption_bar.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/wheel_tracker/css/wheel_tracker.css"
@@ -44,7 +44,10 @@ app_license = "mit"
 
 # include js in doctype views
 doctype_js = {"Job Card": "public/js/job_card.js"}
-# doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
+doctype_list_js = {
+	"Wheel": "public/js/wheel_list.js",
+	"Measurement Event": "public/js/measurement_event_list.js",
+}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
@@ -138,8 +141,15 @@ after_install = "wheel_tracker.install.after_install"
 # Hook on document methods and events
 
 doc_events = {
+	"Item": {
+		"after_insert": "wheel_tracker.item_variant_hooks.create_wheel_type_from_variant",
+	},
 	"Stock Entry": {
+		"before_validate": "wheel_tracker.stock_entry_hooks.assign_serial_numbers_for_wheel_receipt",
 		"on_submit": "wheel_tracker.stock_entry_hooks.create_wheels_on_material_receipt",
+	},
+	"Stock Ledger Entry": {
+		"on_submit": "wheel_tracker.stock_ledger_hooks.sync_wheel_status_from_stock_ledger",
 	},
 	"Job Card": {
 		"validate": "wheel_tracker.job_card_integration.validate_wheel_assignments",

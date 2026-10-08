@@ -31,7 +31,7 @@
   },
   {
    "default": "10",
-   "description": "Percentage of a wheel's diamond-layer volume that is never counted as usable (matches the 'minus 10%' columns in the legacy spreadsheet).",
+   "description": "Percentage of a wheel's diamond-layer volume that's never counted as usable.",
    "fieldname": "usable_volume_floor_percent",
    "fieldtype": "Percent",
    "label": "Usable Volume Floor %",

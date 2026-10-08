@@ -65,6 +65,43 @@ def release_all_wheels_for_job(job_card: str):
 
 
 def update_job_card_wheel_cost(job_card: str):
-	"""Recompute the Job Card's rolled-up wear cost from its submitted Measurement Events."""
-	total = frappe.db.get_value("Measurement Event", {"job_card": job_card, "docstatus": 1}, "sum(job_cost)")
+	"""Recompute the Job Card's rolled-up wear cost from its share of every submitted
+	Measurement Event linked to it (see Measurement Event Job Card — a Wheel's wear
+	between two measurements can be split across several Job Cards, PRD v12), then roll
+	that up into its Work Order (see PRD v10)."""
+	total = frappe.db.sql(
+		"""
+		select sum(mejc.allocated_cost)
+		from `tabMeasurement Event Job Card` mejc
+		inner join `tabMeasurement Event` me on me.name = mejc.parent
+		where mejc.job_card = %(job_card)s
+			and me.docstatus = 1
+		""",
+		{"job_card": job_card},
+	)[0][0]
 	frappe.db.set_value("Job Card", job_card, "custom_wheel_wear_cost", flt(total))
+
+	work_order = frappe.db.get_value("Job Card", job_card, "work_order")
+	if work_order:
+		sync_wheel_cost_to_work_order(work_order)
+
+
+def sync_wheel_cost_to_work_order(work_order: str):
+	"""Sum Wheel Wear Cost across every non-cancelled Job Card on a Work Order into
+	Work Order.additional_operating_cost — ERPNext's own bolt-on operating-cost
+	extension point (work_order.py's calculate_operating_cost(): total_operating_cost =
+	additional_operating_cost + ... + corrective_operation_cost — already read by
+	BOM.add_operations_cost() into Stock Entry's own FG valuation). Mirrors Job Card's
+	own update_corrective_in_work_order(), which does exactly this shape for
+	corrective_operation_cost."""
+	total = frappe.db.get_value(
+		"Job Card", {"work_order": work_order, "docstatus": ["!=", 2]}, "sum(custom_wheel_wear_cost)"
+	)
+
+	wo = frappe.get_doc("Work Order", work_order)
+	if wo.docstatus == 2:
+		return
+	wo.additional_operating_cost = flt(total)
+	wo.calculate_operating_cost()
+	wo.flags.ignore_validate_update_after_submit = True
+	wo.save(ignore_permissions=True)

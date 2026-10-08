@@ -29,7 +29,7 @@ class Wheel(Document):
 
 	def recalculate_wear(self):
 		wheel_type = frappe.get_cached_doc("Wheel Type", self.wheel_type)
-		usable_fraction = get_usable_volume_fraction()
+		usable_fraction = get_usable_volume_fraction(wheel_type.usable_volume_floor_percent)
 
 		self.usable_current_volume = flt(self.current_volume) * usable_fraction
 		self.consumed_volume = flt(wheel_type.usable_original_volume) - flt(self.usable_current_volume)
@@ -109,7 +109,7 @@ def release_from_job_card(wheel: str):
 @frappe.whitelist()
 def retire_wheel(wheel: str, reason: str):
 	"""Manually retire a Wheel outside the measurement-driven wear flow — called by
-	Wheel Usability Check (see PRD v9), and usable directly for any Wheel that needs
+	Wheel Retirement (see PRD v9/v10), and usable directly for any Wheel that needs
 	retiring for a reason other than reaching 100% consumption (e.g. physically
 	damaged). A no-op if already Retired, so it's safe to call unconditionally."""
 	doc = frappe.get_doc("Wheel", wheel)
@@ -126,7 +126,7 @@ def retire_wheel(wheel: str, reason: str):
 
 @frappe.whitelist()
 def reinstate_wheel(wheel: str):
-	"""Bring a Retired Wheel back to In Stock — called by Wheel Usability Check when a
+	"""Bring a Retired Wheel back to In Stock — called by Wheel Retirement when it's
 	later check finds it usable after all. A no-op if not currently Retired. Wheels
 	that are still at >=100% consumption (see check_auto_retirement) immediately
 	re-retire themselves on the save below — this can't be used to override a
@@ -140,3 +140,12 @@ def reinstate_wheel(wheel: str):
 	doc.retirement_reason = None
 	doc.save(ignore_permissions=True)
 	return doc.status
+
+
+@frappe.whitelist()
+def sync_wheel_warehouse(wheel: str, warehouse: str | None):
+	"""Keep Wheel.warehouse in step with a real stock movement (e.g. Material Transfer)
+	without touching status — see stock_ledger_hooks.py. No-op if unchanged or empty."""
+	if not warehouse or frappe.db.get_value("Wheel", wheel, "warehouse") == warehouse:
+		return
+	frappe.db.set_value("Wheel", wheel, "warehouse", warehouse)

@@ -22,7 +22,7 @@ WHEEL_SHAPES = [
 	{"shape_code": "1A1", "wheel_geometry": "Flat / Straight"},
 	# P-series slitting/cutting-off wheels aren't tracked by graduated caliper wear at
 	# all per the shop floor (see PRD v9) — they're simply usable or not usable, so
-	# Measurement Event is blocked for them; Wheel Usability Check is used instead.
+	# Measurement Event is blocked for them; Wheel Retirement is used instead.
 	{
 		"shape_code": "P1.5",
 		"wheel_geometry": "Flat / Straight",

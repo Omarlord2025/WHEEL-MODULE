@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
+from frappe.utils import flt
 
 from wheel_tracker.test_helpers import cleanup_wheel_tracker_records, make_wheel_type
 from wheel_tracker.wheel_tracker.doctype.wheel_type.wheel_type import calculate_wheel_volume
@@ -107,6 +108,34 @@ class TestWheelType(FrappeTestCase):
 		) / 100
 		self.assertAlmostEqual(st.usable_original_volume, st.original_volume * fraction, places=2)
 
+	def test_usable_original_volume_uses_own_floor_override_when_set(self):
+		global_floor = frappe.db.get_single_value("Wheel Tracker Settings", "usable_volume_floor_percent")
+		override_floor = flt(global_floor) + 15  # deliberately different from the global default
+		st = self.track(
+			make_wheel_type(
+				original_diameter=100,
+				original_inner_diameter=60,
+				original_diamond_height=6,
+				usable_volume_floor_percent=override_floor,
+			)
+		)
+		expected = st.original_volume * (100 - override_floor) / 100
+		self.assertAlmostEqual(st.usable_original_volume, expected, places=2)
+		self.assertNotAlmostEqual(
+			st.usable_original_volume,
+			st.original_volume * (100 - flt(global_floor)) / 100,
+			places=2,
+		)
+
+	def test_usable_original_volume_falls_back_to_global_floor_when_blank(self):
+		st = self.track(
+			make_wheel_type(original_diameter=100, original_inner_diameter=60, original_diamond_height=6)
+		)
+		fraction = (
+			100 - frappe.db.get_single_value("Wheel Tracker Settings", "usable_volume_floor_percent")
+		) / 100
+		self.assertAlmostEqual(st.usable_original_volume, st.original_volume * fraction, places=2)
+
 	def test_cost_per_mm3_derived_from_unit_cost(self):
 		st = self.track(
 			make_wheel_type(
@@ -133,5 +162,27 @@ class TestWheelType(FrappeTestCase):
 			make_wheel_type,
 			original_diameter=60,
 			original_inner_diameter=100,
+			original_diamond_height=6,
+		)
+
+	def test_new_wheel_type_serializes_its_item(self):
+		st = self.track(make_wheel_type(original_diameter=100, original_inner_diameter=60, original_diamond_height=6))
+		self.assertTrue(frappe.db.get_value("Item", st.item, "has_serial_no"))
+
+	def test_throws_if_item_has_submitted_stock_and_cant_be_serialized(self):
+		from erpnext.stock.doctype.stock_entry.stock_entry_utils import make_stock_entry
+
+		from wheel_tracker.test_helpers import make_item
+
+		item_code = make_item()
+		frappe.db.set_value("Item", item_code, "has_serial_no", 0)
+		make_stock_entry(item_code=item_code, qty=1, to_warehouse="_Test Warehouse - _TC", purpose="Material Receipt")
+
+		self.assertRaises(
+			frappe.ValidationError,
+			make_wheel_type,
+			item=item_code,
+			original_diameter=100,
+			original_inner_diameter=60,
 			original_diamond_height=6,
 		)

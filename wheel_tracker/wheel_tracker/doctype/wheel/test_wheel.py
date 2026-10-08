@@ -52,6 +52,21 @@ class TestWheel(FrappeTestCase):
 		self.assertAlmostEqual(wheel.usable_current_volume, half_volume * 0.9, places=2)
 		self.assertAlmostEqual(wheel.consumption_percent, 50, places=1)
 
+	def test_wear_calc_uses_wheel_type_floor_override(self):
+		override_type = self.track_type(
+			make_wheel_type(
+				original_diameter=100,
+				original_inner_diameter=60,
+				original_diamond_height=6,
+				usable_volume_floor_percent=25,
+			)
+		)
+		wheel = make_wheel(override_type.name)
+		half_volume = override_type.original_volume / 2
+		wheel.current_volume = half_volume
+		wheel.save()
+		self.assertAlmostEqual(wheel.usable_current_volume, half_volume * 0.75, places=2)
+
 	def test_auto_retires_at_full_consumption(self):
 		wheel = make_wheel(self.wheel_type.name)
 		wheel.current_volume = 0

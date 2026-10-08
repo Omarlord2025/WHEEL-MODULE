@@ -1,8 +1,13 @@
 {
  "charts": [],
- "content": "[{\"id\": \"stwsHdr1\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\", \"col\": 12}}, {\"id\": \"stwsSc01\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Wheel Type\", \"col\": 3}}, {\"id\": \"stwsSc02\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Wheel\", \"col\": 3}}, {\"id\": \"stwsSc03\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Measurement Event\", \"col\": 3}}, {\"id\": \"stwsSc04\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Wheel Tracker Settings\", \"col\": 3}}, {\"id\": \"stwsSp01\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"stwsHdr2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Overview</b></span>\", \"col\": 12}}, {\"id\": \"stwsNc01\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Wheels In Stock\", \"col\": 3}}, {\"id\": \"stwsNc02\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Wheels In Use\", \"col\": 3}}, {\"id\": \"stwsNc03\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Wheels Nearing Retirement\", \"col\": 3}}, {\"id\": \"stwsNc04\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Wheel Types Below Reorder Point\", \"col\": 3}}, {\"id\": \"stwsSp02\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"stwsHdr3\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Masters & Operations</b></span>\", \"col\": 12}}, {\"id\": \"stwsCd01\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 3}}, {\"id\": \"stwsCd04\", \"type\": \"card\", \"data\": {\"card_name\": \"Classification\", \"col\": 3}}, {\"id\": \"stwsCd02\", \"type\": \"card\", \"data\": {\"card_name\": \"Operations\", \"col\": 3}}, {\"id\": \"stwsCd03\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 3}}]",
+ "content": "[{\"id\": \"stwsLangBtn\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Grinding Wheels Language Toggle\", \"col\": 12}}, {\"id\": \"stwsHdr1\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\", \"col\": 12}}, {\"id\": \"stwsSc01\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Wheel Type\", \"col\": 3}}, {\"id\": \"stwsSc02\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Wheel\", \"col\": 3}}, {\"id\": \"stwsSc03\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Measurement Event\", \"col\": 3}}, {\"id\": \"stwsSc04\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Wheel Tracker Settings\", \"col\": 3}}, {\"id\": \"stwsSp01\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"stwsHdr2\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Overview</b></span>\", \"col\": 12}}, {\"id\": \"stwsNc01\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Wheels In Stock\", \"col\": 3}}, {\"id\": \"stwsNc02\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Wheels In Use\", \"col\": 3}}, {\"id\": \"stwsNc03\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Wheels Nearing Retirement\", \"col\": 3}}, {\"id\": \"stwsNc04\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Wheel Types Below Reorder Point\", \"col\": 3}}, {\"id\": \"stwsSp02\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"stwsHdr3\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Masters & Operations</b></span>\", \"col\": 12}}, {\"id\": \"stwsCd01\", \"type\": \"card\", \"data\": {\"card_name\": \"Masters\", \"col\": 3}}, {\"id\": \"stwsCd04\", \"type\": \"card\", \"data\": {\"card_name\": \"Classification\", \"col\": 3}}, {\"id\": \"stwsCd02\", \"type\": \"card\", \"data\": {\"card_name\": \"Operations\", \"col\": 3}}, {\"id\": \"stwsCd03\", \"type\": \"card\", \"data\": {\"card_name\": \"Reports\", \"col\": 3}}]",
  "creation": "2026-08-16 00:00:00",
- "custom_blocks": [],
+ "custom_blocks": [
+  {
+   "custom_block_name": "Grinding Wheels Language Toggle",
+   "label": "Language Toggle"
+  }
+ ],
  "docstatus": 0,
  "doctype": "Workspace",
  "for_user": "",
@@ -10,7 +15,7 @@
  "icon": "tool",
  "idx": 0,
  "is_hidden": 0,
- "label": "Wheel Tracker",
+ "label": "Grinding Wheels",
  "links": [
   {
    "hidden": 0,
@@ -150,9 +155,9 @@
    "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Wheel Usability Check",
+   "label": "Wheel Retirement",
    "link_count": 0,
-   "link_to": "Wheel Usability Check",
+   "link_to": "Wheel Retirement",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -164,6 +169,17 @@
    "label": "Bulk Import Wheels",
    "link_count": 0,
    "link_to": "wheel-bulk-import",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Batch Measurement Entry",
+   "link_count": 0,
+   "link_to": "wheel-batch-measurement",
    "link_type": "Page",
    "onboard": 0,
    "type": "Link"
@@ -188,10 +204,10 @@
    "type": "Link"
   }
  ],
- "modified": "2026-08-19 00:00:00.000000",
+ "modified": "2026-09-10 16:42:44.333634",
  "modified_by": "Administrator",
  "module": "Wheel Tracker",
- "name": "Wheel Tracker",
+ "name": "Grinding Wheels",
  "number_cards": [
   {
    "label": "Wheels In Stock",
@@ -244,5 +260,5 @@
    "type": "DocType"
   }
  ],
- "title": "Wheel Tracker"
+ "title": "Grinding Wheels"
 }

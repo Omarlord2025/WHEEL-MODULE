@@ -20,7 +20,7 @@
   },
   {
    "default": "0",
-   "description": "Checked for profiled/angled shapes whose abrasive band is a taper/bevel rather than a straight annulus — the volume formula switches to the exact conical-frustum-ring calculation, driven by each Wheel Type's Angle. Left unchecked for flat/straight shapes, where the exact annulus formula applies directly.",
+   "description": "Check for profiled/angled shapes (taper/bevel); leave unchecked for flat/straight shapes.",
    "fieldname": "requires_correction_factor",
    "fieldtype": "Check",
    "in_list_view": 1,
