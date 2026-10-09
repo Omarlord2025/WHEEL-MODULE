@@ -1,7 +1,25 @@
 # PRD — Resharpening Wheel (Diamond/CBN Wheel) Tracking Module
 **App target:** ERPNext v15 / Frappe Framework, hardcoded custom app (code-based doctypes, version-controlled)
 **Company:** CNC Leaders
-**Status:** Draft v19 — the language switch redone to be genuinely scoped to this module alone
+**Status:** Draft v20 — fixed the workspace disappearing under Arabic, and closed remaining translation gaps
+
+---
+
+## v20 — the workspace was disappearing under Arabic, plus real remaining translation gaps
+
+Customer report: `/goal do not stop until done and fixed the disappearance and entire translation shit for the module`. Reproduced live by reusing the customer's own active Desk session cookie (`tabSessions`) in a real headless browser rather than guessing — on the Grinding Wheels workspace with Arabic selected, every shortcut, number card, and Masters/Operations doctype link had silently vanished; only header text ("Your Shortcuts", "Overview") survived.
+
+**Root cause, found by reading Frappe's own source, not assuming:** `frappe/public/js/frappe/views/workspace/blocks/block.js`'s `make()` matches a content block's stored name against its server-fetched widget data via `obj.label == __(block_name)` — it reuses the global translate function as an *internal identity check*, not just for display. v19's wrapper translated `block_name` (e.g. "Wheel Type" → "نوع العجلة") while `obj.label` (built server-side, never touched by the client) stayed English — so the comparison failed for every shortcut/number-card/card block, `make()` returned `false`, and the widget just never rendered. No exception, no console error, no Error Log entry — genuinely silent.
+
+**Fix:** `wheel_tracker_language.js` now skips translation entirely whenever `frappe.get_route()[0] === "Workspaces"` (verified empirically: `["Workspaces","Grinding Wheels"]` vs. `["List","Wheel","List"]` elsewhere) — this is a Frappe-documented, stable API, not a private internal, and it sidesteps the *entire class* of this bug (shortcut/number_card/card/links/chart blocks all share the same `make()` pattern) rather than trying to enumerate and exclude every doctype/shortcut/card/number-card name individually, which would've been permanent whack-a-mole against future workspace content changes. Trade-off, accepted: the workspace landing page itself always renders in English regardless of the setting; every actual doctype form, list, filter sidebar, report, and the two custom Pages are unaffected and still translate normally, since none of those routes do identity-matching through `__()`.
+
+**Closed two more real gaps while fixing this, both confirmed via direct source reading:**
+1. Field **descriptions** were never in scope before this version — only labels, Select options, and doctype names. Audited all 42 of this module's field descriptions against `ar.csv`, found all 42 missing, translated and added every one.
+2. Both custom Pages (`wheel_batch_measurement.js`, `wheel_bulk_import.js`) passed a raw hardcoded English string as `title:` to `frappe.ui.make_app_page()`. `Page.set_title()` (`frappe/public/js/frappe/ui/page.js`) never wraps its `title` argument in `__()` on its own — so neither page's title was *ever* translatable, a pre-existing gap unrelated to this feature. Fixed by wrapping both in `__(...)` at the call site.
+
+**Verification discipline changed too:** earlier in this same investigation, a screenshot of the Wheel Type list showed what looked like a wrong/garbled Arabic word in the status badge — turned out to be a misreading of a small cursive glyph, not a bug (confirmed by extracting the actual `textContent` via Playwright, which read correctly as "مفعّل"/Enabled). Screenshots are useful for layout/disappearance, not for verifying exact Arabic text content; DOM text extraction is the real check.
+
+85 tests passing (unchanged), clean migrate, verified via a real headless browser reusing a live session cookie: workspace fully restored under Arabic (shortcuts, number cards, Masters & Operations all present and correct), list/form/filter-sidebar/report/page titles all confirmed via direct DOM text, zero console or page errors across every route checked.
 
 ---
 
