@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe import _
+from wheel_tracker.language_switch import _
 from frappe.model.document import Document
 
 from wheel_tracker.wheel_tracker.doctype.wheel.wheel import reinstate_wheel, retire_wheel

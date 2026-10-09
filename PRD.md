@@ -1,7 +1,21 @@
 # PRD — Resharpening Wheel (Diamond/CBN Wheel) Tracking Module
 **App target:** ERPNext v15 / Frappe Framework, hardcoded custom app (code-based doctypes, version-controlled)
 **Company:** CNC Leaders
-**Status:** Draft v21 — the workspace now fully translates (not just "doesn't crash"), every known translation gap closed
+**Status:** Draft v22 — closed a structural gap: every server-computed string (report columns, validation messages) now respects the switch too
+
+---
+
+## v22 — the translation switch was entirely client-side JS; server-computed strings never saw it
+
+Caught by actually running the Wheel Cost Summary report with real data loaded, not just its empty state: the report title and filter placeholders translated correctly, but the **data table's own column headers stayed in English** — a real, reproducible gap, not a timing artifact (re-confirmed with a fresh screenshot after the first one turned out to be a stale cached read of a reused filename, a mistake worth remembering for next time: always use a fresh file name when re-verifying a changed screenshot).
+
+**Root cause:** `wheel_tracker_language.js` only ever wraps the *client-side* `window.__`/`frappe._`. Report columns are built once, server-side, in `wheel_cost_summary.py`'s `get_columns()`, using Python's `from frappe import _` — which translates using `frappe.local.lang`, the real session/site language. This feature deliberately never touches that (per the v19 rejection of touching System Settings/User), so every server-computed string — not just this report, **any** `frappe.throw(_("..."))` validation message anywhere in this app's own Python — was always going to render in whatever the session's actual language is, completely blind to this module's own switch. Audited every call site across the app: 7 files, 20 translated strings (`job_card_integration.py`, `bulk_import.py`, `wheel_type.py`, `wheel_cost_summary.py`, `wheel_retirement.py`, `wheel.py`, `measurement_event.py`).
+
+**Fix:** `frappe._()` already accepts an explicit `lang=` override with zero side effect on session state (confirmed by reading its source: `local.lang` is only read, never written, when `lang` is passed) — so `wheel_tracker.language_switch._()` is a drop-in replacement for Frappe's own `_` that pins that override to `Wheel Tracker Settings.language` instead. Swapped `from frappe import _` → `from wheel_tracker.language_switch import _` in all 7 files; every existing call site picked it up with no other code changes. Verified: the report's data table now shows "حدث القياس"/"التاريخ"/"بطاقة عمل"/"عجلة"/"نوع العجلة"/etc. as real column headers over real data rows, not just the title.
+
+**Real consequence, caught by the test suite, not guessed at:** `TestWheel.test_auto_retires_at_full_consumption` started failing — `wheel.py`'s `check_auto_retirement()` sets `retirement_reason` via `_("Auto-retired: consumption reached {0}%")`, and since the *live* `Wheel Tracker Settings.language` happened to be set to Arabic from manual testing, the test's assertion for the English substring broke. This is correct new behavior (the string genuinely does respect the switch now), but a test suite shouldn't be fragile to whatever a human last left an interactive Single doctype set to. Added `wheel_tracker.install.before_tests()`, wired via `hooks.py`, pinning the setting to English before the suite runs — the same pattern Frappe apps already use for seeding a default Company/Fiscal Year.
+
+**Verified exhaustively this time, not just spot-checked:** every one of the 11 doctypes in this module (including Wheel Grit/Concentration/Bond, which have zero real records on this site — checked via their blank `/new` forms instead), both custom Pages' full body content (not just titles), the Wheel Cost Summary report with real data loaded, and the workspace — all read via actual extracted `textContent`/`innerText`, not screenshots or assumption. Zero page errors across every route. 85 tests passing, clean migrate.
 
 ---
 

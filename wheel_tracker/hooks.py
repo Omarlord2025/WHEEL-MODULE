@@ -196,7 +196,7 @@ scheduler_events = {
 # Testing
 # -------
 
-# before_tests = "wheel_tracker.install.before_tests"
+before_tests = "wheel_tracker.install.before_tests"
 
 # Overriding Methods
 # ------------------------------

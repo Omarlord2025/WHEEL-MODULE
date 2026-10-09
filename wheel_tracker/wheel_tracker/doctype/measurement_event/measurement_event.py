@@ -4,7 +4,7 @@
 from types import SimpleNamespace
 
 import frappe
-from frappe import _
+from wheel_tracker.language_switch import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
