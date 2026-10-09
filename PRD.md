@@ -1,7 +1,17 @@
 # PRD — Resharpening Wheel (Diamond/CBN Wheel) Tracking Module
 **App target:** ERPNext v15 / Frappe Framework, hardcoded custom app (code-based doctypes, version-controlled)
 **Company:** CNC Leaders
-**Status:** Draft v22 — translation coverage verified exhaustively, including pages with no real data to test against
+**Status:** Draft v23 — the Arabic word for "Wheel" was wrong throughout; corrected to the real trade term
+
+---
+
+## v23 — عجلة was the wrong word for "Wheel" everywhere; corrected to حجر
+
+Direct customer correction: "it is حجر not عجلة." عجلة means a vehicle wheel (car tire, cart wheel); the real Arabic trade term for a resharpening/grinding wheel — this app's entire subject — is حجر (literally "stone," as in a grinding stone), the word actually used on the shop floor. Every single Arabic string in `ar.csv` that used عجلة/العجلة/عجلات/العجلات (58 of ~213 rows) was wrong, not just a handful.
+
+**Not a blind find-and-replace.** حجر is grammatically masculine; عجلة was feminine. Arabic requires gender agreement on verbs, adjectives, and pronouns referring to a noun, so swapping the noun alone would have produced broken grammar throughout (e.g. "الحجر متقاعدة" — "the stone [fem.] is-retired[fem.]" — wrong). Went through all 58 lines individually, distinguishing *singular* instance references (needed the adjective/verb/pronoun changed to masculine too — "العجلة {0} متقاعدة" → "الحجر {0} متقاعد") from *plural* references (Arabic's non-human-plural rule already takes feminine-singular agreement regardless of the noun's own gender, so "عجلات متبقية" → "أحجار متبقية" needed only the noun swapped, not "متبقية"). Caught one residual gap by actually checking a live rendered page rather than trusting the line-by-line edit alone: the `Retired` status option (`"متقاعدة"`) and `Backfilled as Retired` default reason weren't touched by the 58-line pass at all, since neither contains the word "wheel" itself — only a careful live read of the Wheel form's Status field caught the leftover feminine form.
+
+Verified via the automated replacement script's own self-check (all 58 old strings confirmed present in the file before rewriting, so nothing was silently skipped), a full manual read-through of the entire corrected file for any remaining gender mismatch, and a live re-check across the Wheel form, the workspace, and the Wheel list — breadcrumbs, field labels, descriptions, and status options all confirmed consistent via real extracted text. 85 tests passing, clean migrate.
 
 ---
 
