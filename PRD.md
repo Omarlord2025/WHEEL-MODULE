@@ -1,7 +1,15 @@
 # PRD — Resharpening Wheel (Diamond/CBN Wheel) Tracking Module
 **App target:** ERPNext v15 / Frappe Framework, hardcoded custom app (code-based doctypes, version-controlled)
 **Company:** CNC Leaders
-**Status:** Draft v22 — closed a structural gap: every server-computed string (report columns, validation messages) now respects the switch too
+**Status:** Draft v22 — translation coverage verified exhaustively, including pages with no real data to test against
+
+---
+
+## Verification note (same day as v22) — testing Batch Measurement Entry's data table without fabricating production data
+
+Remaining gap after v22: the Batch Measurement Entry page's intro text and empty-state messages were verified, but never its actual wheels-to-measure *table* with real rows — because this site genuinely has **zero** `Job Card Wheel` rows and **zero** Job Cards at all (confirmed via direct SQL), so the table could never populate from real data without first building full ERPNext manufacturing infrastructure (BOM, Work Order, routing, workstation) from scratch, purely to pixel-check a translation. Fabricating that on a live, already-populated demo site for this purpose alone was judged not worth the risk.
+
+Instead: intercepted the page's own network call (`wheel_tracker.batch_measurement.get_wheels_used_between`) via Playwright's request routing and substituted a realistic fake response — the real, unmodified production JS then rendered the real table from it, with zero database writes. Confirmed the full table — "عجلة"/"نوع العجلة"/"بطاقات العمل"/"القطر (مم)"/"القطر الداخلي (مم)"/"ارتفاع طبقة الماس (مم)" column headers, the non-measurable-shape warning banner, real wheel/job-card codes correctly left untranslated, numeric values correctly populated into the input fields, and even the page's primary action button ("اعتماد القياسات") — all render correctly together. This is the same technique worth reaching for generally when a UI state depends on data a given site doesn't have: mock the one network response, let the real code render it, rather than fabricating database records or skipping the check.
 
 ---
 
