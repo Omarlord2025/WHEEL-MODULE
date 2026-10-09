@@ -1,9 +1,24 @@
+import os
+
 app_name = "wheel_tracker"
 app_title = "Wheel Tracker"
 app_publisher = "Omar Sabry"
 app_description = "Diamond/CBN resharpening wheel tracking, wear cost allocation, and reorder alerts for CNC Leaders"
 app_email = "omarelgewily2011@gmail.com"
 app_license = "mit"
+
+
+def _v(public_js_path):
+	"""Cache-busting query string from the file's own mtime. These JS includes are
+	served directly (not through the hashed esbuild bundle pipeline), with a 12-hour
+	max-age Cache-Control header — an edit to any of them was otherwise invisible to
+	an already-loaded browser for up to 12 hours with no way to tell. Computed at
+	import time so it's always correct after any edit with zero manual bumping."""
+	fs_path = os.path.join(os.path.dirname(__file__), "public", "js", public_js_path)
+	try:
+		return f"?v={int(os.path.getmtime(fs_path))}"
+	except OSError:
+		return ""
 
 # Apps
 # ------------------
@@ -27,8 +42,8 @@ app_license = "mit"
 # include js, css files in header of desk.html
 # app_include_css = "/assets/wheel_tracker/css/wheel_tracker.css"
 app_include_js = [
-	"/assets/wheel_tracker/js/consumption_bar.js",
-	"/assets/wheel_tracker/js/wheel_tracker_language.js",
+	"/assets/wheel_tracker/js/consumption_bar.js" + _v("consumption_bar.js"),
+	"/assets/wheel_tracker/js/wheel_tracker_language.js" + _v("wheel_tracker_language.js"),
 ]
 
 # include js, css files in header of web template
@@ -47,17 +62,17 @@ app_include_js = [
 
 # include js in doctype views
 doctype_js = {
-	"Job Card": "public/js/job_card.js",
-	"Wheel Shape": "public/js/shape_image_live_preview.js",
-	"Wheel Type": "public/js/shape_image_live_preview.js",
-	"Wheel": "public/js/shape_image_live_preview.js",
-	"Measurement Event": "public/js/shape_image_live_preview.js",
-	"Wheel Retirement": "public/js/shape_image_live_preview.js",
-	"Wheel Tracker Settings": "public/js/wheel_tracker_settings.js",
+	"Job Card": "public/js/job_card.js" + _v("job_card.js"),
+	"Wheel Shape": "public/js/shape_image_live_preview.js" + _v("shape_image_live_preview.js"),
+	"Wheel Type": "public/js/shape_image_live_preview.js" + _v("shape_image_live_preview.js"),
+	"Wheel": "public/js/shape_image_live_preview.js" + _v("shape_image_live_preview.js"),
+	"Measurement Event": "public/js/shape_image_live_preview.js" + _v("shape_image_live_preview.js"),
+	"Wheel Retirement": "public/js/shape_image_live_preview.js" + _v("shape_image_live_preview.js"),
+	"Wheel Tracker Settings": "public/js/wheel_tracker_settings.js" + _v("wheel_tracker_settings.js"),
 }
 doctype_list_js = {
-	"Wheel": "public/js/wheel_list.js",
-	"Measurement Event": "public/js/measurement_event_list.js",
+	"Wheel": "public/js/wheel_list.js" + _v("wheel_list.js"),
+	"Measurement Event": "public/js/measurement_event_list.js" + _v("measurement_event_list.js"),
 }
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}

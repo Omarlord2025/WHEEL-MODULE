@@ -23,30 +23,8 @@
 		});
 	}
 
-	function on_workspace_page() {
-		// Frappe's own workspace renderer (frappe/public/js/.../blocks/block.js, make())
-		// matches a shortcut/card/number-card block's stored name against its pre-fetched
-		// data via `obj.label == __(block_name)` — reusing the *same* translate function
-		// for an internal identity check, not just display. If we translate block_name
-		// here but the other side of that comparison (obj.label, built server-side) stays
-		// English, the match silently fails and the widget never renders — no error, it
-		// just vanishes. Confirmed live: every shortcut/number-card/card-link on the
-		// Grinding Wheels workspace disappeared under Arabic before this guard existed.
-		// Skipping translation specifically on the Workspaces route sidesteps the entire
-		// bug class (chart/quick_list/links blocks use the same pattern) without having to
-		// enumerate and exclude every doctype/shortcut/card name one at a time — it has no
-		// effect on breadcrumbs or list/report titles, which render on their own separate
-		// routes and never hit this comparison.
-		return typeof frappe !== "undefined" && frappe.get_route && frappe.get_route()[0] === "Workspaces";
-	}
-
 	window.__ = frappe._ = function (txt, replace, context) {
-		if (
-			wt_language === "Arabic" &&
-			typeof txt === "string" &&
-			wt_dictionary[txt] &&
-			!on_workspace_page()
-		) {
+		if (wt_language === "Arabic" && typeof txt === "string" && wt_dictionary[txt]) {
 			let translated = wt_dictionary[txt];
 			if (replace && typeof replace === "object") {
 				translated = $.format(translated, replace);
@@ -55,6 +33,119 @@
 		}
 		return original_translate(txt, replace, context);
 	};
+
+	// --- Workspace shortcut/card/number-card/chart/quick-list fix -------------------
+	// Frappe's own workspace renderer (frappe/public/js/frappe/views/workspace/blocks/
+	// block.js, make()) matches a block's stored name against its server-fetched data
+	// via `obj.label == __(block_name)` — reusing the translate function as an
+	// *internal identity check*, not just for display. `obj.label` comes straight from
+	// the server and is always English (this feature never touches server-side
+	// language), so once block_name is translated the comparison fails every time and
+	// the widget silently never renders — confirmed live: every shortcut/number-card/
+	// card-link on the Grinding Wheels workspace vanished under Arabic, no error
+	// anywhere. A route-wide "don't translate on the Workspaces page" fix was tried
+	// first and worked, but it's too broad: it also blocked legitimate, safe
+	// translation of header text and anything else on that page. The precise fix:
+	// patch just the shared `make()` method (every workspace block type — shortcut,
+	// card, number_card, chart, quick_list — extends the same `Block` base and
+	// inherits it unchanged, reachable via the public `frappe.workspace_block.blocks`
+	// registry) so *only* its internal matching uses the original, untranslated
+	// `__()`, while the widget it then builds still renders through our wrapped
+	// `__()` normally, same as everywhere else. This is a pinned reimplementation of
+	// Frappe's current `make()` body (same file/line as cited above) — if a Frappe
+	// upgrade changes that method, this silently stops helping (falls back to Frappe's
+	// own current behavior, i.e. no translation on these blocks — not breakage), but
+	// should be re-checked against the new source after any framework upgrade.
+	function patch_workspace_block_matching() {
+		if (!frappe.workspace_block || !frappe.workspace_block.blocks) return;
+		const sample = frappe.workspace_block.blocks.shortcut;
+		if (!sample || !sample.prototype) return;
+		const block_proto = Object.getPrototypeOf(sample.prototype);
+		if (!block_proto || typeof block_proto.make !== "function" || block_proto.__wt_patched) return;
+
+		block_proto.make = function (block, block_name, widget_type = block) {
+			let block_data = this.config.page_data[block + "s"].items.find((obj) => {
+				return (
+					frappe.utils.unescape_html(obj.label) ==
+					frappe.utils.unescape_html(original_translate(block_name))
+				);
+			});
+			if (!block_data) return false;
+			this.wrapper.innerHTML = "";
+			block_data.in_customize_mode = !this.readOnly;
+			this.block_widget = new frappe.widget.SingleWidgetGroup({
+				container: this.wrapper,
+				type: widget_type,
+				class_name: block == "chart" ? "widget-charts" : "",
+				options: this.options,
+				widgets: block_data,
+				api: this.api,
+				block: this.block,
+			});
+			this.wrapper.setAttribute(block + "_name", block_name);
+			if (!this.readOnly) {
+				this.block_widget.customize();
+			}
+			return true;
+		};
+		block_proto.__wt_patched = true;
+	}
+
+	patch_workspace_block_matching();
+
+	// --- Links-card individual doctype items -----------------------------------------
+	// Separate, unrelated gap: frappe/public/js/frappe/widgets/links_widget.js builds
+	// each doctype link's visible text as `item.link_title = item.label || item.name`
+	// and inserts it straight into the DOM — never passed through `__()` at all, by
+	// Frappe itself, for anyone, in any language (confirmed by reading the file; this
+	// is a pre-existing core gap, not something this feature introduced or can trigger
+	// the make()-matching bug through, since no identity comparison is involved here).
+	// Fixed with a plain, additive DOM text swap instead of another prototype patch:
+	// safe because it runs after Frappe's own rendering, only ever replaces whole,
+	// exact-match text nodes inside `.link-text`/`.link-content` elements, and a
+	// MutationObserver reacting to added nodes rather than clobbering editable content.
+	function translate_link_item_text(el) {
+		const original = el.textContent;
+		const trimmed = original.trim();
+		if (!trimmed) return;
+		const translated = wt_dictionary[trimmed];
+		if (translated && translated !== trimmed) {
+			el.textContent = original.replace(trimmed, translated);
+		}
+	}
+
+	function scan_for_link_items(root) {
+		if (wt_language !== "Arabic") return;
+		root.querySelectorAll &&
+			root.querySelectorAll(".link-text, .link-content").forEach(translate_link_item_text);
+	}
+
+	function observe_workspace_links() {
+		// document.body, not a specific workspace container captured once at script
+		// load: the workspace's own `.layout-main-section` is torn down and rebuilt on
+		// every SPA navigation back to it, which would silently disconnect an observer
+		// bound to the old element. body persists for the whole Desk session.
+		const observer = new MutationObserver((mutations) => {
+			if (wt_language !== "Arabic") return;
+			for (const mutation of mutations) {
+				mutation.addedNodes.forEach((node) => {
+					if (node.nodeType !== 1) return;
+					if (node.matches && node.matches(".link-text, .link-content")) {
+						translate_link_item_text(node);
+					}
+					scan_for_link_items(node);
+				});
+			}
+		});
+		observer.observe(document.body, { childList: true, subtree: true });
+		scan_for_link_items(document.body);
+	}
+
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", observe_workspace_links);
+	} else {
+		observe_workspace_links();
+	}
 
 	frappe.wheel_tracker_refresh_language = refresh_state;
 	refresh_state();

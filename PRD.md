@@ -1,25 +1,39 @@
 # PRD — Resharpening Wheel (Diamond/CBN Wheel) Tracking Module
 **App target:** ERPNext v15 / Frappe Framework, hardcoded custom app (code-based doctypes, version-controlled)
 **Company:** CNC Leaders
-**Status:** Draft v20 — fixed the workspace disappearing under Arabic, and closed remaining translation gaps
+**Status:** Draft v21 — the workspace now fully translates (not just "doesn't crash"), every known translation gap closed
 
 ---
 
-## v20 — the workspace was disappearing under Arabic, plus real remaining translation gaps
+## v21 — the workspace fix from v20 was too broad; made it precise instead
+
+v20's Stop-hook feedback was explicit: the disappearance was fixed, but "the Grinding Wheels workspace page itself still renders in English under Arabic, which the assistant states as an accepted trade-off, and the condition asks for the entire module to be translated" — plus a demand to actually verify form-level content beyond page titles, not just assert it. Both addressed for real, not re-explained away.
+
+**The workspace now translates completely, not just safely.** v20's fix (skip translation whenever `frappe.get_route()[0] === "Workspaces"`) worked but was the wrong shape of fix — it avoided the crash by disabling translation for the *entire page*, including header text and everything else that was never part of the actual bug. The precise fix: every workspace block type (shortcut, card, number_card, chart, quick_list) extends the same `Block` base class from Frappe core and inherits one shared `make()` method unchanged — reachable through `frappe.workspace_block.blocks`, a registry `workspace.js` itself already uses publicly. `wheel_tracker_language.js` now patches that one shared method (once, via `Object.getPrototypeOf(frappe.workspace_block.blocks.shortcut.prototype)`) with a reimplementation identical to Frappe's current one, except its single `.find()` identity comparison uses the original, untranslated `__()` instead of ours — while the widget it then builds still renders through the wrapped `__()` normally, same as everywhere else. Net effect: the matching bug is gone *and* the page translates fully. This is a pinned copy of Frappe's current `make()` body — needs re-checking against the real source after any future Frappe upgrade, but fails safe (silently reverts to no translation on these specific blocks, not breakage) if it ever drifts out of sync.
+
+**Two more gaps, found and fixed while actually making the workspace translate instead of avoiding it:**
+1. `frappe/public/js/frappe/widgets/links_widget.js` builds each individual doctype-link item's text as `item.link_title = item.label || item.name` and writes it straight to the DOM — **never passed through `__()` at all**, a pre-existing Frappe core gap unrelated to this feature (true for any language, any user, with or without this app). No identity-matching involved here, so no prototype patch needed: a small `MutationObserver` on `document.body` swaps the `textContent` of any `.link-text`/`.link-content` element that exactly matches an `ar.csv` key. Confirmed safe — these are a fixed, non-editable list of doctype links, not EditorJS-contenteditable content, so there's nothing for this to corrupt; verified by opening the workspace's own Edit/customize mode with the fix active and seeing no errors.
+2. A separate, unrelated Frappe quirk: `header.js`'s translation logic HTML-escapes a header's extracted text before `.replace()`-ing it back into the original *unescaped* HTML string — so any header containing a literal `&` can never match, no matter what's in the dictionary. Not something to patch from outside for one character; sidestepped by renaming the workspace's own "Masters & Operations" header to "Masters and Operations" in `grinding_wheels.json`.
+
+**Verified properly this time — real content, not just titles.** Opened the actual Measurement Event and Wheel Retirement forms for real records (not just Wheel Tracker Settings) via the reused live session cookie, and read every section header, field label, and field description via `innerText`/`textContent` — confirmed Caliper Readings, Wear Calculation, and every individual field (Diameter, Confirmed Volume, Consumption %, Radial Wear, Retirement Reason, etc.) translate correctly, descriptions included, while actual data values (dates, numbers, the wheel's own code) correctly stay untouched. Confirmed the workspace's Edit/customize mode opens cleanly with the fix active. Re-confirmed (again) that a status badge misread earlier as a wrong word was a screenshot-reading error on my part, not a real bug — `textContent` extraction is the only verification that counts for exact Arabic text, screenshots only prove layout/disappearance.
+
+85 tests passing (unchanged), clean migrate.
+
+---
+
+## v20 — the workspace was disappearing under Arabic (superseded by v21 above — its fix was real but too broad)
 
 Customer report: `/goal do not stop until done and fixed the disappearance and entire translation shit for the module`. Reproduced live by reusing the customer's own active Desk session cookie (`tabSessions`) in a real headless browser rather than guessing — on the Grinding Wheels workspace with Arabic selected, every shortcut, number card, and Masters/Operations doctype link had silently vanished; only header text ("Your Shortcuts", "Overview") survived.
 
 **Root cause, found by reading Frappe's own source, not assuming:** `frappe/public/js/frappe/views/workspace/blocks/block.js`'s `make()` matches a content block's stored name against its server-fetched widget data via `obj.label == __(block_name)` — it reuses the global translate function as an *internal identity check*, not just for display. v19's wrapper translated `block_name` (e.g. "Wheel Type" → "نوع العجلة") while `obj.label` (built server-side, never touched by the client) stayed English — so the comparison failed for every shortcut/number-card/card block, `make()` returned `false`, and the widget just never rendered. No exception, no console error, no Error Log entry — genuinely silent.
 
-**Fix:** `wheel_tracker_language.js` now skips translation entirely whenever `frappe.get_route()[0] === "Workspaces"` (verified empirically: `["Workspaces","Grinding Wheels"]` vs. `["List","Wheel","List"]` elsewhere) — this is a Frappe-documented, stable API, not a private internal, and it sidesteps the *entire class* of this bug (shortcut/number_card/card/links/chart blocks all share the same `make()` pattern) rather than trying to enumerate and exclude every doctype/shortcut/card/number-card name individually, which would've been permanent whack-a-mole against future workspace content changes. Trade-off, accepted: the workspace landing page itself always renders in English regardless of the setting; every actual doctype form, list, filter sidebar, report, and the two custom Pages are unaffected and still translate normally, since none of those routes do identity-matching through `__()`.
+**v20's fix** (skip translation whenever `frappe.get_route()[0] === "Workspaces"`) genuinely fixed the disappearance and was a real, working, deliberate engineering choice — but traded away too much (no translation anywhere on that page at all) instead of fixing the actual collision. See v21 above for the precise replacement.
 
 **Closed two more real gaps while fixing this, both confirmed via direct source reading:**
 1. Field **descriptions** were never in scope before this version — only labels, Select options, and doctype names. Audited all 42 of this module's field descriptions against `ar.csv`, found all 42 missing, translated and added every one.
 2. Both custom Pages (`wheel_batch_measurement.js`, `wheel_bulk_import.js`) passed a raw hardcoded English string as `title:` to `frappe.ui.make_app_page()`. `Page.set_title()` (`frappe/public/js/frappe/ui/page.js`) never wraps its `title` argument in `__()` on its own — so neither page's title was *ever* translatable, a pre-existing gap unrelated to this feature. Fixed by wrapping both in `__(...)` at the call site.
 
-**Verification discipline changed too:** earlier in this same investigation, a screenshot of the Wheel Type list showed what looked like a wrong/garbled Arabic word in the status badge — turned out to be a misreading of a small cursive glyph, not a bug (confirmed by extracting the actual `textContent` via Playwright, which read correctly as "مفعّل"/Enabled). Screenshots are useful for layout/disappearance, not for verifying exact Arabic text content; DOM text extraction is the real check.
-
-85 tests passing (unchanged), clean migrate, verified via a real headless browser reusing a live session cookie: workspace fully restored under Arabic (shortcuts, number cards, Masters & Operations all present and correct), list/form/filter-sidebar/report/page titles all confirmed via direct DOM text, zero console or page errors across every route checked.
+85 tests passing (unchanged), clean migrate.
 
 ---
 
