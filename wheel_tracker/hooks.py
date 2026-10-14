@@ -61,18 +61,28 @@ app_include_js = [
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
+# NOTE: doctype_js/doctype_list_js are NOT <script src> tags — Frappe reads these files'
+# own content server-side and inlines it into the doctype's meta (as meta.__js/
+# meta.__list_js), executed client-side via `new Function(...)`. That server-side read
+# resolves the hook's string as a literal filesystem path, so appending `_v()`'s
+# `?v=<mtime>` (fine for app_include_js, a real <script src> URL) breaks the path and
+# makes the read fail silently — meta.__js/__list_js end up simply unset, no error
+# anywhere. Confirmed live: this silently broke image live-preview, the Settings
+# reload-after-save, and the consumption bar/color list-view formatters for every page
+# load since _v() was added to these two hooks. Never add _v() (or any query string) to
+# doctype_js/doctype_list_js values — only app_include_js is a real URL.
 doctype_js = {
-	"Job Card": "public/js/job_card.js" + _v("job_card.js"),
-	"Wheel Shape": "public/js/shape_image_live_preview.js" + _v("shape_image_live_preview.js"),
-	"Wheel Type": "public/js/shape_image_live_preview.js" + _v("shape_image_live_preview.js"),
-	"Wheel": "public/js/shape_image_live_preview.js" + _v("shape_image_live_preview.js"),
-	"Measurement Event": "public/js/shape_image_live_preview.js" + _v("shape_image_live_preview.js"),
-	"Wheel Retirement": "public/js/shape_image_live_preview.js" + _v("shape_image_live_preview.js"),
-	"Wheel Tracker Settings": "public/js/wheel_tracker_settings.js" + _v("wheel_tracker_settings.js"),
+	"Job Card": "public/js/job_card.js",
+	"Wheel Shape": "public/js/shape_image_live_preview.js",
+	"Wheel Type": "public/js/shape_image_live_preview.js",
+	"Wheel": "public/js/shape_image_live_preview.js",
+	"Measurement Event": "public/js/shape_image_live_preview.js",
+	"Wheel Retirement": "public/js/shape_image_live_preview.js",
+	"Wheel Tracker Settings": "public/js/wheel_tracker_settings.js",
 }
 doctype_list_js = {
-	"Wheel": "public/js/wheel_list.js" + _v("wheel_list.js"),
-	"Measurement Event": "public/js/measurement_event_list.js" + _v("measurement_event_list.js"),
+	"Wheel": "public/js/wheel_list.js",
+	"Measurement Event": "public/js/measurement_event_list.js",
 }
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}

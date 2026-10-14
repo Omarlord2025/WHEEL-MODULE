@@ -1,7 +1,19 @@
 # PRD — Resharpening Wheel (Diamond/CBN Wheel) Tracking Module
 **App target:** ERPNext v15 / Frappe Framework, hardcoded custom app (code-based doctypes, version-controlled)
 **Company:** CNC Leaders
-**Status:** Draft v25 — "every text, no exceptions": core Desk chrome, the calendar widget, and a real sidebar race condition closed
+**Status:** Draft v26 — the v22 cache-busting fix silently broke every doctype_js/doctype_list_js script site-wide; fixed
+
+---
+
+## v26 — the consumption bar's colors and numbers silently stopped working, root-caused to a real regression in v22
+
+Customer report: "why the consumption bars edits were removed like the specific colors and numbers." The source file (`consumption_bar.js`) was untouched since the feature was first built — confirmed via `git log`, only ever modified in the original commit. So nothing was "removed" in the sense of a reverted edit; something was breaking it live instead. Reproduced directly: the Measurement Event/Wheel list views were rendering Frappe's own *built-in* bare percent bar (unrounded value, no `%` label, no color thresholds) instead of `wheel_tracker.render_consumption_bar()` at all — meaning the custom formatter was never even being invoked.
+
+**Root cause:** `doctype_js`/`doctype_list_js` are *not* `<script src>` tags, unlike `app_include_js`. Frappe reads those files' own content server-side and inlines it directly into the doctype's metadata (`meta.__js`/`meta.__list_js`), executed client-side via `new Function(...)` — confirmed by reading `frappe/public/js/frappe/model/model.js`'s `init_doctype()`. That server-side read resolves the hook's string as a literal filesystem path. The v22 cache-busting fix (`_v()`, appending `?v=<mtime>`) is correct and necessary for `app_include_js` — a real URL — but applying the same helper to `doctype_js`/`doctype_list_js` broke their file-path resolution with an invalid `?v=...` suffix, failing the read **silently** (`meta.__js`/`__list_js` simply end up unset, no error logged anywhere, no 404, nothing in the console). This had been quietly broken since v22 for every doctype_js/doctype_list_js entry in this app — not just the consumption bar: `shape_image_live_preview.js` (the live shape-photo preview across 5 doctypes), `wheel_tracker_settings.js` (the reload-after-language-change), and `job_card.js` were all equally affected, just not yet reported.
+
+**Fixed by removing `_v()` from `doctype_js`/`doctype_list_js` entirely** — those two hooks keep their original bare paths; only `app_include_js` (a genuine URL) gets the cache-busting suffix. Verified by reading `locals.DocType[doctype].__js`/`__list_js` directly client-side (confirmed populated again for Measurement Event, Wheel Type, Wheel Tracker Settings, Job Card) and visually confirming the real colored/numbered bars render correctly (green under 70%, orange 70–90%, exact rounded percentage on every bar).
+
+85 tests passing, clean migrate.
 
 ---
 
