@@ -125,3 +125,5 @@ retiring.
 
 - `CLAUDE.md` — engineering rules and design principles, for developers.
 - `PRD.md` — the full spec and formula history, if you need the "why" behind a number.
+- `GUIDED_TEST.md` — a step-by-step checklist to verify the whole app end to end,
+  useful after any update or on a new site.
