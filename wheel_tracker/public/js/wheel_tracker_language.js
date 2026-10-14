@@ -8,10 +8,22 @@
 	// effect outside Wheel Tracker's own doctypes/pages, regardless of who's viewing
 	// or what their own language is set to.
 	const original_translate = window.__;
-	let wt_language = "English";
-	let wt_dictionary = {};
+	// Read synchronously from frappe.boot first (populated server-side by
+	// language_switch.boot_session(), inline in the page HTML before any bundle script
+	// even runs) instead of starting from "English" and waiting on an async frappe.call
+	// — Desk's own sidebar renders once, synchronously, very early in boot and is never
+	// rebuilt afterward, so a cold page load reliably lost that race under the old
+	// async-only version: the breadcrumb/title (rendered later, after boot settles)
+	// came out correctly in Arabic while the sidebar entry for the same workspace,
+	// rendered earlier, stayed in English — confirmed live, fixed only by a reload. The
+	// boot payload removes the race instead of working around it.
+	const boot_state = (frappe.boot && frappe.boot.wheel_tracker_language_state) || {};
+	let wt_language = boot_state.language || "English";
+	let wt_dictionary = boot_state.dictionary || {};
 
 	function refresh_state() {
+		// Re-checks after boot — picks up a language change saved from another tab/
+		// session without needing a fresh login; the first paint never depends on this.
 		frappe.call({
 			method: "wheel_tracker.language_switch.get_language_state",
 			callback(r) {
@@ -146,6 +158,57 @@
 	} else {
 		observe_workspace_links();
 	}
+
+	// --- Date picker month/day names --------------------------------------------------
+	// A separate gap from everything above: the calendar popup's month/day names come
+	// from Frappe's own bundled air-datepicker locale files (confirmed: a full Arabic
+	// one already ships, frappe/public/js/frappe/form/controls/datepicker_i18n.js), but
+	// ControlDate.set_date_options() (frappe/public/js/frappe/form/controls/date.js)
+	// picks the language from `frappe.boot.user.language` — the viewer's own real
+	// account setting, not our `__()` dictionary, and not something this feature
+	// touches (see the v19/v20 PRD entries on why not). So the calendar would otherwise
+	// always render in whatever the viewer's own language already is, regardless of
+	// this module's switch. Patches the one method that picks it, scoped to only this
+	// module's own doctypes/pages (checked via the control's own `doctype`, when bound
+	// to a form, or the current route for standalone Page/Report filter fields like
+	// Batch Measurement Entry's or Wheel Cost Summary's own date filters) — every date
+	// field on every other doctype keeps using the viewer's own language untouched.
+	const WHEEL_TRACKER_DOCTYPES = new Set([
+		"Wheel", "Wheel Type", "Wheel Shape", "Wheel Geometry", "Wheel Material",
+		"Wheel Grit", "Wheel Concentration", "Wheel Bond", "Measurement Event",
+		"Measurement Event Job Card", "Wheel Retirement", "Wheel Tracker Settings",
+		"Job Card Wheel", "Wheel Type Profile Segment",
+	]);
+	const WHEEL_TRACKER_ROUTES = new Set([
+		"wheel-batch-measurement", "wheel-bulk-import", "Wheel Cost Summary",
+	]);
+
+	function is_wheel_tracker_context(control) {
+		if (control.doctype && WHEEL_TRACKER_DOCTYPES.has(control.doctype)) return true;
+		if (control.doctype) return false;
+		const route = frappe.get_route ? frappe.get_route() : [];
+		return route.some((part) => WHEEL_TRACKER_ROUTES.has(part));
+	}
+
+	function patch_datepicker_language() {
+		const ControlDate = frappe.ui.form && frappe.ui.form.ControlDate;
+		if (!ControlDate || !ControlDate.prototype || ControlDate.prototype.__wt_patched) return;
+
+		const original_set_date_options = ControlDate.prototype.set_date_options;
+		ControlDate.prototype.set_date_options = function (...args) {
+			original_set_date_options.apply(this, args);
+			if (
+				wt_language === "Arabic" &&
+				$.fn.datepicker.language["ar"] &&
+				is_wheel_tracker_context(this)
+			) {
+				this.datepicker_options.language = "ar";
+			}
+		};
+		ControlDate.prototype.__wt_patched = true;
+	}
+
+	patch_datepicker_language();
 
 	frappe.wheel_tracker_refresh_language = refresh_state;
 	refresh_state();

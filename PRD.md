@@ -1,7 +1,21 @@
 # PRD — Resharpening Wheel (Diamond/CBN Wheel) Tracking Module
 **App target:** ERPNext v15 / Frappe Framework, hardcoded custom app (code-based doctypes, version-controlled)
 **Company:** CNC Leaders
-**Status:** Draft v24 — volume formulas are now visible and editable per Wheel Shape, not hardcoded in Python
+**Status:** Draft v25 — "every text, no exceptions": core Desk chrome, the calendar widget, and a real sidebar race condition closed
+
+---
+
+## v25 — "every text should be translated no exceptions"
+
+Customer directive, after a question about "inline explanations in the workspace" turned up nothing in the workspace's own data (checked both the fixture file and the live Workspace doctype's `content`/`shortcuts`/`links` — none have any description/explanation text set, in either place): translate everything, full stop, not just this module's own doctype names and messages.
+
+**Added ~26 core Desk chrome strings** this module's screens render on every page — `Save`, `Not Saved`, `Submitted`, `Cancel`, `Assigned To`, `Attachments`, `Tags`, `Share`, `Comments`, `Activity`, `List View`, `Filter By`, `Created By`, `Edit Filters`, `Save Filter`, `Last Updated On`, `Load More`, `Today`, `Home`, `Help`, `No new notifications`, `Begin typing for results.`, and the workspace's own brand title `Grinding Wheels` → "أحجار الجلخ" — none of these are Wheel Tracker's own strings, but Frappe ships no Arabic file at all (confirmed repeatedly — see v18/v22), so nobody else's translation file covers them either.
+
+**The calendar widget needed a different mechanism entirely, not just more `ar.csv` rows.** Frappe already ships a complete Arabic locale for its date picker (`datepicker_i18n.js` — full month/day names, "اليوم" for Today) — but `ControlDate.set_date_options()` (`frappe/public/js/frappe/form/controls/date.js`) picks the language from `frappe.boot.user.language`, the viewer's own real account setting, entirely bypassing the `__()` dictionary this feature's whole mechanism is built on. Patched `ControlDate.prototype.set_date_options` (the same pinned-reimplementation-of-one-method technique as the v21 workspace fix) to override the resolved language to `"ar"` — but **only** when the field belongs to one of this module's own doctypes, or (for standalone Page/Report filter fields with no bound doctype, like Batch Measurement Entry's or Wheel Cost Summary's own date filters) the current route is one of this module's own pages. Verified live: Batch Measurement Entry's From Date field pops a fully Arabic calendar (month name, day names, "اليوم"); the scoping check itself (`WHEEL_TRACKER_DOCTYPES`/`WHEEL_TRACKER_ROUTES` sets) is a straightforward membership test, so an unrelated doctype's date field is unaffected by construction.
+
+**Found and fixed a genuine race condition, not a structural gap, while checking the workspace sidebar specifically.** On a cold page load, the breadcrumb/title rendered correctly in Arabic, but the left sidebar's own "Grinding Wheels" entry stayed in English — reloading the exact same page fixed it, proving the sidebar (which Desk renders once, synchronously, very early in boot, and never rebuilds afterward) was simply racing the script's own async `frappe.call` for the dictionary and sometimes losing. Root-caused properly instead of working around it with a forced reload: added `language_switch.boot_session()`, an `extend_bootinfo` hook that injects the same `{language, dictionary}` state directly into the server-rendered boot payload — available synchronously the instant `wheel_tracker_language.js` runs, before any bundle script even executes, so there's no async round-trip for the *first* render to possibly lose. The existing `frappe.call` stays as a background refresh for mid-session changes (e.g. picking up someone else's save without a fresh login), now a freshness check rather than the only source of initial state. Verified with three separate genuinely-cold browser contexts (not just a reload of a warm one) — all three showed the sidebar and title correctly in Arabic with zero English leftovers.
+
+85 tests passing, clean migrate.
 
 ---
 

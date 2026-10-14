@@ -5,20 +5,39 @@ import frappe
 from frappe.translate import get_translations_from_csv
 
 
-@frappe.whitelist()
-def get_language_state():
-	"""Backs `public/js/wheel_tracker_language.js`, which wraps the client's own global
-	`__()` to intercept *only* the exact strings this module defines in
-	`translations/ar.csv` — nothing else. Deliberately doesn't touch System Settings or
-	any User's own `language` field: those are whole-site/every-user settings, and
-	switching Arabic on for Wheel Tracker specifically must not flip either, per explicit
-	customer rejection of an earlier version that did. Every Desk session asks this fresh
-	on load, so there's nothing cached server-side to go stale, and no RTL/system-wide
-	effect of any kind — a user with their own language already set to something else is
-	completely unaffected outside of this module's own strings."""
+def _build_language_state() -> dict:
 	language = frappe.db.get_single_value("Wheel Tracker Settings", "language") or "English"
 	dictionary = get_translations_from_csv("ar", "wheel_tracker") if language == "Arabic" else {}
 	return {"language": language, "dictionary": dictionary}
+
+
+@frappe.whitelist()
+def get_language_state():
+	"""Backs `public/js/wheel_tracker_language.js`'s post-boot refresh (after a save on
+	Wheel Tracker Settings, or any later re-check within the same Desk session) — the
+	*first* paint of a fresh page load gets this from `boot_session()` below instead, not
+	this AJAX round-trip; see there for why that distinction matters. Deliberately
+	doesn't touch System Settings or any User's own `language` field: those are
+	whole-site/every-user settings, and switching Arabic on for Wheel Tracker
+	specifically must not flip either, per explicit customer rejection of an earlier
+	version that did — a user with their own language already set to something else is
+	completely unaffected outside of this module's own strings."""
+	return _build_language_state()
+
+
+def boot_session(bootinfo):
+	"""`extend_bootinfo` hook (see hooks.py) — injects the same state `get_language_state()`
+	returns directly into the server-rendered boot payload, so it's available
+	synchronously the moment `wheel_tracker_language.js` runs, before a single line of
+	Desk JS executes. Without this, the script's only option was an async `frappe.call`
+	after load — which loses the race against Desk's own sidebar, which renders once,
+	synchronously, very early in boot and is never rebuilt afterward: confirmed live, a
+	cold page load showed the breadcrumb/title correctly in Arabic (rendered later, after
+	the race was already won) while the sidebar entry for this same workspace stayed in
+	English (rendered before the dictionary arrived) — a reload fixed it, proving it was
+	exactly this timing gap and nothing structural. Reading this at boot removes the race
+	entirely instead of papering over it with a forced reload."""
+	bootinfo.wheel_tracker_language_state = _build_language_state()
 
 
 def get_current_lang_code() -> str:

@@ -77,6 +77,10 @@ doctype_list_js = {
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
+# Boot session
+# -----------
+extend_bootinfo = "wheel_tracker.language_switch.boot_session"
+
 # Svg Icons
 # ------------------
 # include app icons in desk
