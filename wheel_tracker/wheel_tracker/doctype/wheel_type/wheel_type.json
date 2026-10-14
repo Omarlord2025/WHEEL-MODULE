@@ -26,6 +26,7 @@
   "total_body_height",
   "profile_segments",
   "section_break_volume",
+  "volume_formula",
   "auto_calc_volume",
   "usable_volume_floor_percent",
   "column_break_volume",
@@ -179,7 +180,7 @@
   },
   {
    "depends_on": "eval:doc.requires_correction_factor",
-   "description": "Informational only \u2014 not used in the volume formula.",
+   "description": "Informational only — not used in the volume formula.",
    "fieldname": "total_body_height",
    "fieldtype": "Float",
    "label": "Total Body Height (mm)",
@@ -187,7 +188,7 @@
   },
   {
    "depends_on": "eval:doc.requires_correction_factor",
-   "description": "One row per conical segment, outer face first \u2014 most wheels (1V1, 12V9) need just one.",
+   "description": "One row per conical segment, outer face first — most wheels (1V1, 12V9) need just one.",
    "fieldname": "profile_segments",
    "fieldtype": "Table",
    "label": "Profile Segments",
@@ -197,6 +198,15 @@
    "fieldname": "section_break_volume",
    "fieldtype": "Section Break",
    "label": "Volume"
+  },
+  {
+   "description": "The exact formula used to compute Original Volume below, from this Type's Shape — edit it on Wheel Shape, not here.",
+   "fetch_from": "shape.volume_formula",
+   "fieldname": "volume_formula",
+   "fieldtype": "Code",
+   "label": "Volume Formula",
+   "options": "Python",
+   "read_only": 1
   },
   {
    "default": "1",
@@ -220,14 +230,14 @@
    "description": "Auto-computed from the dimensions above; editable if a manufacturer spec sheet disagrees.",
    "fieldname": "original_volume",
    "fieldtype": "Float",
-   "label": "Original Volume (mm\u00b3)",
+   "label": "Original Volume (mm³)",
    "precision": "3"
   },
   {
    "description": "Original Volume x (1 - Usable Volume Floor %) — the floor is never usable.",
    "fieldname": "usable_original_volume",
    "fieldtype": "Float",
-   "label": "Usable Original Volume (mm\u00b3)",
+   "label": "Usable Original Volume (mm³)",
    "precision": "3",
    "read_only": 1
   },
@@ -243,10 +253,10 @@
    "reqd": 1
   },
   {
-   "description": "Unit Cost \u00f7 Usable Original Volume. Used to allocate wear cost per job.",
+   "description": "Unit Cost ÷ Usable Original Volume. Used to allocate wear cost per job.",
    "fieldname": "cost_per_mm3",
    "fieldtype": "Currency",
-   "label": "Cost per mm\u00b3 (usable)",
+   "label": "Cost per mm³ (usable)",
    "precision": "4",
    "read_only": 1
   },
@@ -317,7 +327,7 @@
   }
  ],
  "links": [],
- "modified": "2026-08-16 18:28:47.677987",
+ "modified": "2026-10-14 17:32:08.533106",
  "modified_by": "Administrator",
  "module": "Wheel Tracker",
  "name": "Wheel Type",

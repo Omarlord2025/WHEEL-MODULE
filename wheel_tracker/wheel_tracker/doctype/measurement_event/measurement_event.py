@@ -33,7 +33,7 @@ class MeasurementEvent(Document):
 
 		inner_diameter, height, segments = self._volume_inputs(wheel_type)
 		self.confirmed_volume = calculate_wheel_volume(
-			self.diameter, inner_diameter, height, wheel_type.requires_correction_factor, segments
+			self.diameter, inner_diameter, height, wheel_type.shape, segments
 		)
 
 		usable_fraction = get_usable_volume_fraction(wheel_type.usable_volume_floor_percent)

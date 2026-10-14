@@ -38,7 +38,7 @@ class TestMeasurementEvent(FrappeTestCase):
 			diameter,
 			self.wheel_type.original_inner_diameter,
 			self.wheel_type.original_diamond_height,
-			self.wheel_type.requires_correction_factor,
+			self.wheel_type.shape,
 			self.wheel_type.profile_segments,
 		)
 

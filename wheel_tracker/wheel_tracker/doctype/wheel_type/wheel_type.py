@@ -8,6 +8,7 @@ from wheel_tracker.language_switch import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
+from wheel_tracker.wheel_tracker.doctype.wheel_shape.wheel_shape import evaluate_volume_formula
 from wheel_tracker.wheel_tracker.doctype.wheel_tracker_settings.wheel_tracker_settings import (
 	get_usable_volume_fraction,
 )
@@ -26,7 +27,7 @@ class WheelType(Document):
 				self.original_diameter,
 				self.original_inner_diameter,
 				self.original_diamond_height,
-				self.requires_correction_factor,
+				self.shape,
 				self.profile_segments,
 			)
 
@@ -63,37 +64,38 @@ def ensure_item_is_serialized(item_code: str) -> None:
 	item.save(ignore_permissions=True)
 
 
-def calculate_wheel_volume(
-	diameter, inner_diameter, height, requires_angle_formula, profile_segments=None
-) -> float:
+def calculate_wheel_volume(diameter, inner_diameter, height, shape, profile_segments=None) -> float:
 	"""
-	Volume (mm³) of a diamond/CBN layer — exact geometry, per CNC Leaders' formula
-	reference ("Volume equations for grinding wheels" — see Wheel Tracker PRD v6/v7).
+	Volume (mm³) of a diamond/CBN layer. The actual geometry formula lives on
+	`Wheel Shape.volume_formula` (PRD v24) — editable per shape without touching code —
+	this function only handles the structural part that isn't really "the formula":
+	dispatching flat vs profiled evaluation mode, and for profiled shapes, chaining
+	each Profile Segment's own diameters from the previous one and summing.
 
-	Flat/straight shapes (1A1, P-series slitting wheels...): exact annulus
-	-> (pi/4) x (D^2 - d^2) x H
-	Verified against 73/78 real measurement rows in the legacy sheet, matching to
-	well under 1% (mostly exact); the other 5 are data-entry errors in that sheet
-	itself (e.g. a recorded current diameter smaller than the bore), not a formula
-	mismatch — see PRD v6.
+	Flat/straight shapes (1A1, P-series slitting wheels...): the shape's formula is
+	evaluated once, given `diameter`/`inner_diameter`/`height` directly. Default
+	formula is the exact annulus (pi/4) x (D^2 - d^2) x H — verified against 73/78
+	real measurement rows in the legacy sheet, matching to well under 1% (mostly
+	exact); the other 5 are data-entry errors in that sheet itself (e.g. a recorded
+	current diameter smaller than the bore), not a formula mismatch — see PRD v6.
 
 	Profiled/angled shapes (1V1, 12V9/11V9...): the abrasive band is one or more
 	conical frustum rings stacked axially, walked from the *big*-end outer/inner
 	diameters (`diameter`/`inner_diameter` — what's actually specified or measured)
 	inward through each `profile_segments` row in order. Each segment's *small*-end
-	diameters are derived from its own angle and height, assuming a uniform radial
-	band thickness within that segment (both boundaries taper in parallel):
+	diameters are derived here from its own angle and height, assuming a uniform
+	radial band thickness within that segment (both boundaries taper in parallel):
 		D_small = D_big - 2 x segment.height x tan(segment.angle)
-	and that segment's ring volume is the outer frustum's volume minus the inner
-	frustum's:
+	and the shape's formula is evaluated once per segment with that segment's own
+	d_out_big/d_out_small/d_in_big/d_in_small/height, summed across segments. Default
+	formula is that outer frustum's volume minus the inner frustum's:
 		V_segment = (pi x h / 12) x [(Dob^2 + Dob.Dos + Dos^2) - (Dib^2 + Dib.Dis + Dis^2)]
-	summed across segments. A single segment (e.g. 1V1) is an exact match to the
-	reference's worked example (Dob=100, Dib=78.4, angle=45, h=5 -> V=14284.19mm³).
-	Two segments (e.g. 11V9/12V9 — a main cone plus a separate chamfer near the
-	bore, confirmed by CNC Leaders as the real physical shape, PRD v7) chain the
-	second segment's diameters from where the first segment's ended; this case has
-	no independent worked example to verify against yet, unlike the single-segment
-	case above.
+	A single segment (e.g. 1V1) is an exact match to the reference's worked example
+	(Dob=100, Dib=78.4, angle=45, h=5 -> V=14284.19mm³). Two segments (e.g.
+	11V9/12V9 — a main cone plus a separate chamfer near the bore, confirmed by CNC
+	Leaders as the real physical shape, PRD v7) chain the second segment's diameters
+	from where the first segment's ended; this case has no independent worked
+	example to verify against yet, unlike the single-segment case above.
 
 	Called with a Wheel Type's original dimensions for its original_volume, and
 	with a Measurement Event's *current* outer diameter reading (inner
@@ -102,8 +104,21 @@ def calculate_wheel_volume(
 	is the only dimension that actually changes as a wheel wears; bore and layer
 	height don't.
 	"""
-	if not requires_angle_formula:
-		return (math.pi / 4) * (flt(diameter) ** 2 - flt(inner_diameter) ** 2) * flt(height)
+	shape_doc = frappe.get_cached_doc("Wheel Shape", shape)
+	# Not shape_doc.requires_correction_factor: that's a fetch_from field (see Wheel
+	# Shape), which only (re)populates when the Shape itself is next saved — reading it
+	# straight from Wheel Geometry here is the one place this genuinely has to be
+	# correct for every pre-existing Shape too, not just ones resaved since this field
+	# was added.
+	requires_correction_factor = frappe.get_cached_value(
+		"Wheel Geometry", shape_doc.wheel_geometry, "requires_correction_factor"
+	)
+
+	if not requires_correction_factor:
+		return evaluate_volume_formula(
+			shape_doc.volume_formula,
+			{"diameter": flt(diameter), "inner_diameter": flt(inner_diameter), "height": flt(height)},
+		)
 
 	d_out, d_in = flt(diameter), flt(inner_diameter)
 	total_volume = 0.0
@@ -111,14 +126,15 @@ def calculate_wheel_volume(
 		delta = 2 * flt(segment.height) * math.tan(math.radians(flt(segment.angle)))
 		d_out_next = d_out - delta
 		d_in_next = d_in - delta
-		total_volume += _ring_frustum_volume(d_out, d_out_next, d_in, d_in_next, flt(segment.height))
+		total_volume += evaluate_volume_formula(
+			shape_doc.volume_formula,
+			{
+				"d_out_big": d_out,
+				"d_out_small": d_out_next,
+				"d_in_big": d_in,
+				"d_in_small": d_in_next,
+				"height": flt(segment.height),
+			},
+		)
 		d_out, d_in = d_out_next, d_in_next
 	return total_volume
-
-
-def _ring_frustum_volume(d_out_big, d_out_small, d_in_big, d_in_small, height) -> float:
-	"""Volume (mm³) of one conical-frustum ring: an outer solid cone frustum minus a
-	coaxial inner one, both spanning the same `height`. See calculate_wheel_volume()."""
-	outer = d_out_big**2 + d_out_big * d_out_small + d_out_small**2
-	inner = d_in_big**2 + d_in_big * d_in_small + d_in_small**2
-	return (math.pi * height / 12) * (outer - inner)

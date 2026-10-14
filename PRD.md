@@ -1,7 +1,23 @@
 # PRD — Resharpening Wheel (Diamond/CBN Wheel) Tracking Module
 **App target:** ERPNext v15 / Frappe Framework, hardcoded custom app (code-based doctypes, version-controlled)
 **Company:** CNC Leaders
-**Status:** Draft v23 — the Arabic word for "Wheel" was wrong throughout; corrected to the real trade term
+**Status:** Draft v24 — volume formulas are now visible and editable per Wheel Shape, not hardcoded in Python
+
+---
+
+## v24 — volume formulas moved out of Python and onto Wheel Shape, editable
+
+Customer request: "make the formulas for each shape to be available and can be edited for wheel type doctypes." Before this version, the two volume formulas (flat annulus vs. profiled conical frustum) were hardcoded directly in `calculate_wheel_volume()` — correct and carefully verified against real data (PRD v6/v7), but invisible and unchangeable without a code deploy. Confirmed the two open design questions with the customer before building: formula lives **on Wheel Shape** (one per shape family, matching how the flat/profiled split already worked), as a **real, freeform math expression** (not a fixed list of named presets).
+
+**New field: `Wheel Shape.volume_formula`** (Code, Python syntax highlighting). Flat/straight shapes (1A1, P-series): evaluated once, with `diameter`/`inner_diameter`/`height` available. Profiled/angled shapes (1V1, 11V9/12V9): evaluated once *per Profile Segment* on the Wheel Type, with that segment's own `d_out_big`/`d_out_small`/`d_in_big`/`d_in_small`/`height` (`calculate_wheel_volume()` still derives each segment's small-end diameters from its angle via `D_small = D_big - 2 x height x tan(angle)` and sums the per-segment results — that chaining is structural plumbing, not really "the formula," and stays in trusted code). `pi` is always available. Evaluated with `frappe.safe_eval()` — the same sandboxed evaluator behind Notification conditions and Server Script, never a raw `eval()`.
+
+**Validated before anything else can depend on it**: `WheelShape.validate()` test-runs the formula with sample numbers (the same 1V1 worked example — Dob=100, Dib=78.4, angle=45°, h=5 — cited throughout this doc) the moment it's saved, and rejects a bad formula right there with the real Python error, rather than letting a typo surface three documents later on a real Wheel Type or Measurement Event.
+
+**Also visible on Wheel Type itself** (per "available... for wheel type doctypes"): a read-only `volume_formula` field, fetched from the Type's own Shape, sitting right next to Original Volume — so anyone looking at a Wheel Type can see exactly what formula produced that number, without having to go find the Shape record. Editing still happens on Wheel Shape, where the description on both fields says so explicitly.
+
+**A real gap found and fixed while backfilling existing data**: the new `requires_correction_factor` fetch_from field added to Wheel Shape (needed so its own `validate()` knows which sample-variable set to self-check with) was blank/0 for every pre-existing Shape — fetch_from only populates on save, the exact same gotcha already documented elsewhere in this app, caught here by a failing test (`calculate_wheel_volume()` tried to look up "Wheel Shape 0", i.e. the Python boolean False being misread as a doctype name from the old call signature) rather than by assuming the first version was correct. Fixed two ways: `calculate_wheel_volume()` itself no longer trusts that fetched field at all — it reads `requires_correction_factor` straight from Wheel Geometry every time, so it can never be wrong regardless of a Shape's own save history; and the backfill patch bulk-updates the fetched field on every existing Shape too, via SQL `UPDATE...JOIN`, so the hidden field itself is also correct for Wheel Shape's own validate().
+
+`calculate_wheel_volume()`'s signature changed (`requires_angle_formula: bool` → `shape: str`, the Wheel Shape's name) — every call site across the app and its tests updated accordingly. Re-ran the full worked-example assertions (the exact 14284.19mm³ 1V1 case, the dual-segment chaining-consistency check, the 73/78-row historical match) and every one still passes bit-for-bit identically, confirming the refactor changed *where* the math lives, not the math itself. Verified live: editing a Shape's formula to a deliberately different value (doubling it) changed a real Wheel Type's `original_volume` immediately on save, and a syntactically broken formula was rejected with a clear error at Wheel Shape save time. 85 tests passing, clean migrate.
 
 ---
 

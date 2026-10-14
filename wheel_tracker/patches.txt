@@ -15,3 +15,4 @@ wheel_tracker.patches.serialize_existing_wheel_type_items
 wheel_tracker.patches.backfill_serial_numbers_and_opening_stock
 wheel_tracker.patches.attach_shape_reference_images
 wheel_tracker.patches.remove_language_toggle
+wheel_tracker.patches.backfill_wheel_shape_volume_formulas
