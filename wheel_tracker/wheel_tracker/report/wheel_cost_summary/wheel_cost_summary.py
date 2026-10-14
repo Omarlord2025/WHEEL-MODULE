@@ -5,7 +5,7 @@
 the legacy spreadsheet never had. Filterable by date range, Wheel Type, and Job Card."""
 
 import frappe
-from frappe import _
+from wheel_tracker.language_switch import _
 
 
 def execute(filters=None):

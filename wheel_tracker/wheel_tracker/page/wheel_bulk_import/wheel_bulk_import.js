@@ -1,7 +1,7 @@
 frappe.pages["wheel-bulk-import"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: "Bulk Import Wheels",
+		title: __("Bulk Import Wheels"),
 		single_column: true,
 	});
 

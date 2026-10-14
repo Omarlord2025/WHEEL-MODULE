@@ -1,9 +1,24 @@
+import os
+
 app_name = "wheel_tracker"
 app_title = "Wheel Tracker"
 app_publisher = "Omar Sabry"
 app_description = "Diamond/CBN resharpening wheel tracking, wear cost allocation, and reorder alerts for CNC Leaders"
 app_email = "omarelgewily2011@gmail.com"
 app_license = "mit"
+
+
+def _v(public_js_path):
+	"""Cache-busting query string from the file's own mtime. These JS includes are
+	served directly (not through the hashed esbuild bundle pipeline), with a 12-hour
+	max-age Cache-Control header — an edit to any of them was otherwise invisible to
+	an already-loaded browser for up to 12 hours with no way to tell. Computed at
+	import time so it's always correct after any edit with zero manual bumping."""
+	fs_path = os.path.join(os.path.dirname(__file__), "public", "js", public_js_path)
+	try:
+		return f"?v={int(os.path.getmtime(fs_path))}"
+	except OSError:
+		return ""
 
 # Apps
 # ------------------
@@ -26,7 +41,10 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/wheel_tracker/css/wheel_tracker.css"
-app_include_js = "/assets/wheel_tracker/js/consumption_bar.js"
+app_include_js = [
+	"/assets/wheel_tracker/js/consumption_bar.js" + _v("consumption_bar.js"),
+	"/assets/wheel_tracker/js/wheel_tracker_language.js" + _v("wheel_tracker_language.js"),
+]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/wheel_tracker/css/wheel_tracker.css"
@@ -43,13 +61,35 @@ app_include_js = "/assets/wheel_tracker/js/consumption_bar.js"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-doctype_js = {"Job Card": "public/js/job_card.js"}
+# NOTE: doctype_js/doctype_list_js are NOT <script src> tags — Frappe reads these files'
+# own content server-side and inlines it into the doctype's meta (as meta.__js/
+# meta.__list_js), executed client-side via `new Function(...)`. That server-side read
+# resolves the hook's string as a literal filesystem path, so appending `_v()`'s
+# `?v=<mtime>` (fine for app_include_js, a real <script src> URL) breaks the path and
+# makes the read fail silently — meta.__js/__list_js end up simply unset, no error
+# anywhere. Confirmed live: this silently broke image live-preview, the Settings
+# reload-after-save, and the consumption bar/color list-view formatters for every page
+# load since _v() was added to these two hooks. Never add _v() (or any query string) to
+# doctype_js/doctype_list_js values — only app_include_js is a real URL.
+doctype_js = {
+	"Job Card": "public/js/job_card.js",
+	"Wheel Shape": "public/js/shape_image_live_preview.js",
+	"Wheel Type": "public/js/shape_image_live_preview.js",
+	"Wheel": "public/js/shape_image_live_preview.js",
+	"Measurement Event": "public/js/shape_image_live_preview.js",
+	"Wheel Retirement": "public/js/shape_image_live_preview.js",
+	"Wheel Tracker Settings": "public/js/wheel_tracker_settings.js",
+}
 doctype_list_js = {
 	"Wheel": "public/js/wheel_list.js",
 	"Measurement Event": "public/js/measurement_event_list.js",
 }
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
+
+# Boot session
+# -----------
+extend_bootinfo = "wheel_tracker.language_switch.boot_session"
 
 # Svg Icons
 # ------------------
@@ -170,7 +210,7 @@ scheduler_events = {
 # Testing
 # -------
 
-# before_tests = "wheel_tracker.install.before_tests"
+before_tests = "wheel_tracker.install.before_tests"
 
 # Overriding Methods
 # ------------------------------

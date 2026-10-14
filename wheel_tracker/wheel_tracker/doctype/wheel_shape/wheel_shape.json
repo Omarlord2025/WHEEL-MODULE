@@ -4,10 +4,16 @@
  "creation": "2026-08-16 00:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
+ "image_field": "shape_image",
  "field_order": [
   "shape_code",
+  "shape_image",
+  "shape_image_preview",
   "wheel_geometry",
+  "requires_correction_factor",
   "requires_measurement",
+  "section_break_formula",
+  "volume_formula",
   "column_break_1",
   "description"
  ],
@@ -22,6 +28,19 @@
    "unique": 1
   },
   {
+   "description": "Click to upload or replace the reference photo below — shown on Wheel Type, Wheel, Measurement Event, and Wheel Retirement too.",
+   "fieldname": "shape_image",
+   "fieldtype": "Attach Image",
+   "label": "Upload Shape Photo"
+  },
+  {
+   "fieldname": "shape_image_preview",
+   "fieldtype": "Image",
+   "label": "Shape Image",
+   "options": "shape_image",
+   "read_only": 1
+  },
+  {
    "fieldname": "wheel_geometry",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -31,12 +50,33 @@
    "reqd": 1
   },
   {
+   "default": "0",
+   "fetch_from": "wheel_geometry.requires_correction_factor",
+   "fieldname": "requires_correction_factor",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Requires Correction Factor",
+   "read_only": 1
+  },
+  {
    "default": "1",
    "description": "Uncheck for shapes tracked usable/not-usable only (P-series) — use Wheel Retirement, not measurement.",
    "fieldname": "requires_measurement",
    "fieldtype": "Check",
    "in_list_view": 1,
    "label": "Requires Measurement"
+  },
+  {
+   "fieldname": "section_break_formula",
+   "fieldtype": "Section Break",
+   "label": "Volume Formula"
+  },
+  {
+   "description": "The exact math used to compute this shape's diamond-layer volume (mm³), in Python — editable here, takes effect immediately for every Wheel Type using this shape. Flat/straight shapes (Requires Correction Factor unchecked): evaluated once, with diameter, inner_diameter, height available. Profiled/angled shapes (checked): evaluated once per Profile Segment row on the Wheel Type, with d_out_big, d_out_small, d_in_big, d_in_small, height available (the segment's own small-end diameters, already derived from its angle) — Wheel Type sums the result across every segment. pi is always available. Validated by trying it with sample numbers as soon as you save; a bad formula is rejected here, before any Wheel Type or Measurement Event ever depends on it.",
+   "fieldname": "volume_formula",
+   "fieldtype": "Code",
+   "label": "Volume Formula",
+   "options": "Python"
   },
   {
    "fieldname": "column_break_1",
@@ -49,7 +89,7 @@
   }
  ],
  "links": [],
- "modified": "2026-08-16 00:00:00.000000",
+ "modified": "2026-10-14 17:32:08.533106",
  "modified_by": "Administrator",
  "module": "Wheel Tracker",
  "name": "Wheel Shape",

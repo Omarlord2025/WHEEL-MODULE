@@ -27,7 +27,7 @@ import csv
 import io
 
 import frappe
-from frappe import _
+from wheel_tracker.language_switch import _
 from frappe.utils import cint, flt, getdate
 
 TEMPLATE_COLUMNS = [

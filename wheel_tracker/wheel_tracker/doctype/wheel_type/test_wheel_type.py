@@ -74,8 +74,8 @@ class TestWheelType(FrappeTestCase):
 		total taper into two identical half-segments must reproduce the exact same
 		volume as computing it as a single segment (same net geometry, two integration
 		steps) — proving the segment-chaining logic itself is sound."""
-		one_segment = calculate_wheel_volume(100, 78.4, 5, True, _segments([(45, 5)]))
-		two_half_segments = calculate_wheel_volume(100, 78.4, 5, True, _segments([(45, 2.5), (45, 2.5)]))
+		one_segment = calculate_wheel_volume(100, 78.4, 5, "1V1", _segments([(45, 5)]))
+		two_half_segments = calculate_wheel_volume(100, 78.4, 5, "1V1", _segments([(45, 2.5), (45, 2.5)]))
 		self.assertAlmostEqual(one_segment, two_half_segments, places=6)
 
 		st = self.track(

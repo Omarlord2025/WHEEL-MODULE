@@ -4,7 +4,7 @@
 from types import SimpleNamespace
 
 import frappe
-from frappe import _
+from wheel_tracker.language_switch import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
@@ -33,7 +33,7 @@ class MeasurementEvent(Document):
 
 		inner_diameter, height, segments = self._volume_inputs(wheel_type)
 		self.confirmed_volume = calculate_wheel_volume(
-			self.diameter, inner_diameter, height, wheel_type.requires_correction_factor, segments
+			self.diameter, inner_diameter, height, wheel_type.shape, segments
 		)
 
 		usable_fraction = get_usable_volume_fraction(wheel_type.usable_volume_floor_percent)
@@ -152,15 +152,17 @@ class MeasurementEvent(Document):
 
 	def create_auto_retirement(self):
 		"""If apply_to_wheel() just auto-retired the Wheel (see Wheel.check_auto_retirement),
-		create+submit a real Wheel Retirement so the Wheel is actually issued out of
-		ERPNext's stock ledger via a Material Issue — not just flagged Retired in Wheel
-		Tracker (see PRD v12). Reuses Wheel Retirement's own on_submit
-		(retire_wheel() + create_retirement_stock_entry()) rather than reimplementing
-		either; retire_wheel() is a no-op here since the Wheel is already Retired, so this
-		does not re-save the Wheel a second time. Must run strictly after apply_to_wheel()'s
-		own wheel.save() has returned — creating a new top-level document here is safe,
-		unlike doing this from inside Wheel.validate() itself, which would recurse into the
-		save() still in progress. No-op if this event didn't trigger retirement."""
+		create a Wheel Retirement *draft* for it — flagging immediately that the Wheel needs
+		retiring, but deliberately leaving the real Material Issue for a human to review and
+		submit (see PRD v15 — a customer decision: the Wheel's own status flips to Retired
+		right away, but nothing leaves the stock ledger until someone confirms it). Does NOT
+		submit the draft itself — that's Wheel Retirement's own on_submit
+		(retire_wheel() + create_retirement_stock_entry()), reused unchanged whenever a human
+		(or, before PRD v15, this same code) actually submits it. Must run strictly after
+		apply_to_wheel()'s own wheel.save() has returned — creating a new top-level document
+		here is safe, unlike doing this from inside Wheel.validate() itself, which would
+		recurse into the save() still in progress. No-op if this event didn't trigger
+		retirement."""
 		if not self.triggered_retirement:
 			return
 
@@ -173,23 +175,30 @@ class MeasurementEvent(Document):
 		retirement.checked_by = self.measured_by
 		retirement.retirement_reason = frappe.db.get_value("Wheel", self.wheel, "retirement_reason")
 		retirement.insert(ignore_permissions=True)
-		retirement.submit()
 
 		self.db_set("auto_retirement", retirement.name)
 
 	def cancel_auto_retirement(self):
 		"""Mirror of create_auto_retirement() for on_cancel(): if this event auto-created a
-		Wheel Retirement, cancel it too — that reverses its Material Issue Stock Entry via
-		Wheel Retirement's own on_cancel (reinstate_wheel() + cancelling the Stock Entry),
-		keeping ERPNext's real stock ledger in step with the Wheel being un-retired. Runs
-		before revert_from_wheel() so the retirement paperwork and stock movement are undone
-		first, then the Wheel's own measured dimensions/status are restored. No-op if no
-		auto_retirement was recorded, or if it's already been cancelled/deleted independently."""
+		Wheel Retirement, undo it too, keeping ERPNext's real stock ledger (if the draft was
+		since reviewed and submitted) or just Wheel Tracker's own records (if it's still
+		pending review) in step with the Wheel being un-retired. Runs before
+		revert_from_wheel() so the retirement paperwork/stock movement are undone first, then
+		the Wheel's own measured dimensions/status are restored. Still-pending drafts are
+		deleted outright (cancel() only applies to submitted docs); already-reviewed-and-
+		submitted ones are cancelled for real, reversing their Material Issue via Wheel
+		Retirement's own on_cancel. No-op if no auto_retirement was recorded, or if it's
+		already been cancelled/deleted independently."""
 		if not self.auto_retirement or not frappe.db.exists("Wheel Retirement", self.auto_retirement):
 			return
 		retirement = frappe.get_doc("Wheel Retirement", self.auto_retirement)
 		if retirement.docstatus == 1:
 			retirement.cancel()
+		elif retirement.docstatus == 0:
+			# Clear our own Link to it first — frappe.delete_doc() refuses to delete a
+			# document that's still referenced elsewhere, and this field is exactly that.
+			self.db_set("auto_retirement", None)
+			frappe.delete_doc("Wheel Retirement", retirement.name, ignore_permissions=True)
 
 	def apply_to_wheel(self):
 		wheel = frappe.get_doc("Wheel", self.wheel)

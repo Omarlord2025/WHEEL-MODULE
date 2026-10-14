@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe import _
+from wheel_tracker.language_switch import _
 from frappe.utils import flt
 
 from wheel_tracker.wheel_tracker.doctype.wheel.wheel import assign_to_job_card, release_from_job_card

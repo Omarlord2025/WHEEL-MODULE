@@ -1,7 +1,7 @@
 frappe.pages["wheel-batch-measurement"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: "Batch Measurement Entry",
+		title: __("Batch Measurement Entry"),
 		single_column: true,
 	});
 
