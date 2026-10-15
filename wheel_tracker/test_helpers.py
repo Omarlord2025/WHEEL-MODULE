@@ -114,9 +114,17 @@ def make_job_card() -> "frappe.model.document.Document":
 
 
 def cleanup_wheel_tracker_records(wheel_type_names: list[str]):
-	"""Delete Measurement Events, Wheel Retirements, Wheel Scrap Sales, Wheels, and
-	Wheel Types created for a test, in FK order."""
+	"""Delete Measurement Events, Wheel Retirements, Wheel Scrap Sales, Wheel
+	Retrievals, Wheels, and Wheel Types created for a test, in FK order."""
 	for wheel_type_name in wheel_type_names:
+		for retrieval_name in frappe.get_all(
+			"Wheel Retrieval Item", filters={"wheel_type": wheel_type_name}, pluck="parent"
+		):
+			if frappe.db.exists("Wheel Retrieval", retrieval_name):
+				doc = frappe.get_doc("Wheel Retrieval", retrieval_name)
+				if doc.docstatus == 1:
+					doc.cancel()
+				frappe.delete_doc("Wheel Retrieval", retrieval_name, force=True)
 		for wheel_name in frappe.get_all("Wheel", filters={"wheel_type": wheel_type_name}, pluck="name"):
 			for sale_name in frappe.get_all(
 				"Wheel Scrap Sale Wheel", filters={"wheel": wheel_name}, pluck="parent"

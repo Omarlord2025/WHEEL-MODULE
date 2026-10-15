@@ -4,11 +4,11 @@ A step-by-step walkthrough to verify the whole app works, end to end, on a real 
 Check each box as you go. If a step doesn't match its expected result, stop and note
 exactly what you saw instead — that's a real bug report, not a guess.
 
-Each section is independent where possible, but Sections 2–9 build on each other in
-order (you're following one wheel's life from arrival to retirement), and Sections 10
-and 11 check the accounting trail those same actions should have left behind — do them
-right after Section 9, not later. You can skip Section 1 if master data already
-exists, and Sections 12–17 can be done in any order once Section 1 is done.
+Each section is independent where possible, but Sections 2–10 build on each other in
+order (you're following one wheel's life from arrival to retirement), and Section 11
+checks the accounting trail those same actions should have left behind — do it
+right after Section 10, not later. You can skip Section 1 if master data already
+exists, and Sections 13–18 can be done in any order once Section 1 is done.
 
 Where to find everything: Desk → **Grinding Wheels** workspace.
 
@@ -36,7 +36,7 @@ workspace. You only need one of each to run the rest of this test.
       (e.g. `1V1`). Confirm each has:
   - [ ] A **Wheel Geometry** link set (flat → `Flat / Straight`, profiled → `Profiled / Angled`).
   - [ ] A **Volume Formula** field with real Python text in it (not blank) — see
-        Section 14 for what this does and how to test editing it.
+        Section 15 for what this does and how to test editing it.
   - [ ] A reference photo showing under **Shape Image** (not a raw link/URL).
 - [ ] **Wheel Material**, **Wheel Grit**, **Wheel Concentration**, **Wheel Bond**: at
       least one record each exists (these feed the Spec Codes section of Wheel Type).
@@ -85,7 +85,34 @@ directly also exercises the same validation and formula logic.
 
 ---
 
-## 4. Put a Wheel on a Job
+## 4. Bring In Wheels Already In Stock (Wheel Retrieval)
+
+- [ ] Open **Wheel Retrieval** → New. Set **Warehouse** to a real Warehouse.
+- [ ] Click **Get Items** with no Item Group set. Expected: every enabled Wheel Type
+      is added as a row, each showing its **Item Name** (not just an Item code) and
+      an **Already in System** quantity (your test site's current Bin qty for that
+      Item/Warehouse — `0` is fine if nothing's been received there yet).
+- [ ] Click **Get Items** again. Expected: no duplicate rows — Wheel Types already in
+      the table are skipped.
+- [ ] Remove all but one row (your Wheel Type from Section 2), set **Quantity to
+      Create** to `2`, and submit. Expected:
+  - [ ] **Total Quantity** = `2`.
+  - [ ] **Stock Entry** links to a real, submitted Material Receipt.
+  - [ ] Exactly 2 new **Wheel** records exist for that Wheel Type, **Status** =
+        `In Stock`, in the Warehouse you picked.
+- [ ] Set the Item Group filter to one that genuinely has no Wheel Types under it and
+      click **Get Items**. Expected: nothing new is added (or a clear "every matching
+      Wheel Type is already in this table" message if the table already has rows).
+- [ ] Cancel the Wheel Retrieval you just submitted. Expected: its Material Receipt
+      shows cancelled too.
+- [ ] Try adding a row for a Wheel Type already in the table a second time (Add Row,
+      same Wheel Type). Expected: a clear "listed more than once" error on save.
+- [ ] Try submitting a row with **Quantity to Create** = `0`. Expected: a clear
+      validation error, nothing saves.
+
+---
+
+## 5. Put a Wheel on a Job
 
 This needs a real Job Card — if your site has no manufacturing data set up yet
 (no Work Orders), this step needs a Work Order created first (core ERPNext,
@@ -102,19 +129,19 @@ and note it as skipped, not failed.
         clear "already In Use" error.
 - [ ] Remove the Wheel from **Wheels Used** and save again. Expected: the Wheel's
       **Status** goes back to `In Stock`, **Current Job Card** clears.
-- [ ] Re-add it (you'll need it In Use again for Section 5).
+- [ ] Re-add it (you'll need it In Use again for Section 6).
 
 ---
 
-## 5. Log Wear — One Wheel at a Time
+## 6. Log Wear — One Wheel at a Time
 
-- [ ] Open **Measurement Event** → New. Pick the In-Use Wheel from Section 4.
+- [ ] Open **Measurement Event** → New. Pick the In-Use Wheel from Section 5.
 - [ ] Enter a **Diameter** reading slightly smaller than the Wheel Type's Original
       Diameter (e.g. `95` if original was `100`).
 - [ ] Submit. Expected:
   - [ ] **Confirmed Volume**, **Consumed Volume**, **Consumption %**, **Job Cost** all
         auto-compute (none blank or zero unless the math genuinely says zero).
-  - [ ] **Job Cards** table shows the Job Card from Section 4, with its full
+  - [ ] **Job Cards** table shows the Job Card from Section 5, with its full
         **Allocated Cost** (100%, since only one Job Card is involved yet).
   - [ ] Open that Job Card: its own **Wheel Wear Cost** field reflects this same cost.
 - [ ] Cancel the Measurement Event. Expected: the Wheel's dimensions/status revert to
@@ -124,7 +151,7 @@ and note it as skipped, not failed.
 
 ---
 
-## 6. Log Wear — Several Wheels at Once
+## 7. Log Wear — Several Wheels at Once
 
 - [ ] Go to the **Batch Measurement Entry** page (under Operations on the workspace).
 - [ ] Set **From Date** to a date before your Job Card's posting date, **To Date** to
@@ -136,7 +163,7 @@ and note it as skipped, not failed.
       Expected:
   - [ ] A success summary shows the count of Measurement Events created.
   - [ ] A real, submitted Measurement Event now exists for that Wheel (check the
-        Measurement Event list) — same wear/cost math as Section 5, not a different
+        Measurement Event list) — same wear/cost math as Section 6, not a different
         shortcut path.
   - [ ] Reloading the same date range no longer lists that Wheel (already measured
         since From Date).
@@ -146,9 +173,9 @@ and note it as skipped, not failed.
 
 ---
 
-## 7. Wear Split Across More Than One Job Card
+## 8. Wear Split Across More Than One Job Card
 
-- [ ] Take one In-Stock Wheel. Assign it to Job Card A (see Section 4), then remove it
+- [ ] Take one In-Stock Wheel. Assign it to Job Card A (see Section 5), then remove it
       (back to In Stock), then assign it to a *different* Job Card B.
 - [ ] Submit one Measurement Event against it with a real diameter change.
 - [ ] Expected: the **Job Cards** table on that Measurement Event shows *both* Job
@@ -157,7 +184,7 @@ and note it as skipped, not failed.
 
 ---
 
-## 8. Auto-Retirement at 100% Consumption
+## 9. Auto-Retirement at 100% Consumption
 
 - [ ] Take any In-Use Wheel (any Shape is fine) and submit a Measurement Event with
       **Diameter** set equal to the Wheel Type's **Original Inner Diameter** (i.e.
@@ -179,25 +206,25 @@ and note it as skipped, not failed.
 
 ---
 
-## 9. Retire a Wheel Early (Damage, Not Wear)
+## 10. Retire a Wheel Early (Damage, Not Wear)
 
 - [ ] Open **Wheel Retirement** → New directly (not auto-created this time). Pick a
       real In-Stock or In-Use Wheel, fill **Retirement Reason** (e.g. "chipped edge"),
       submit.
 - [ ] Expected: Wheel's Status → `Retired`, a real submitted Material Issue exists,
-      Bin quantity drops by 1 — same outcome as Section 8's reviewed draft, just
+      Bin quantity drops by 1 — same outcome as Section 9's reviewed draft, just
       triggered directly instead of automatically.
 - [ ] Cancel it. Expected: Wheel back to its prior status, Material Issue reversed.
 
 ---
 
-## 10. Checking the Accounting Side (Stock Ledger & General Ledger)
+## 11. Checking the Accounting Side (Stock Ledger & General Ledger)
 
 Wheel Tracker deliberately builds on real ERPNext Stock Entries — a wheel's arrival and
 retirement are supposed to be genuine accounting events, not just field changes inside
 this app. This section only applies if your Company has **Enable Perpetual Inventory**
-checked (Company → Accounts tab); if it's off, skip to Section 12 and note why. Do this
-section right after Sections 3–9, while that Stock Entry and GL trail is still fresh.
+checked (Company → Accounts tab); if it's off, skip to Section 13 and note why. Do this
+section right after Sections 3–10, while that Stock Entry and GL trail is still fresh.
 
 - [ ] Open the Material Receipt Stock Entry from Section 3. Confirm:
   - [ ] Its **GL Entries** (Stock Entry → View → Accounting Ledger) show a debit to
@@ -207,7 +234,7 @@ section right after Sections 3–9, while that Stock Entry and GL trail is still
   - [ ] Each new Wheel's backing **Serial No** record (Stock → Serial No) shows a
         **Purchase Rate** matching that same Unit Cost — check one of the 3 Wheels
         from Section 3 directly, not just the Stock Entry total.
-- [ ] Open the submitted Wheel Retirement / Material Issue from Section 8 or 9.
+- [ ] Open the submitted Wheel Retirement / Material Issue from Section 9 or 10.
       Confirm:
   - [ ] Its GL Entries are the mirror image — a credit to **Stock In Hand**, a debit
         to **Stock Adjustment** — at the *same* valuation as the matching receipt
@@ -216,7 +243,7 @@ section right after Sections 3–9, while that Stock Entry and GL trail is still
   - [ ] **Stock → Bin** for that Item/Warehouse shows **actual_qty** down by exactly 1
         since Section 3, and **Stock Value** down by the same valuation amount.
 - [ ] Run core ERPNext's **Stock Balance** report, filtered to the Wheel Type's Item
-      and your test Warehouse. Confirm the running qty/value after your Section 3/8/9
+      and your test Warehouse. Confirm the running qty/value after your Section 3/9/10
       actions matches what you'd expect by hand (received 3, issued however many you
       retired).
 - [ ] Run **General Ledger**, filtered to the **Stock In Hand** account, for this same
@@ -224,7 +251,7 @@ section right after Sections 3–9, while that Stock Entry and GL trail is still
       from this test shows up as its own real GL Entry, and that these numbers
       reconcile with the Stock Balance report above — a mismatch here is a real
       accounting bug, not a Wheel Tracker display issue.
-- [ ] If Section 4/7 involved a real Work Order (not skipped), confirm the wheel's
+- [ ] If Section 5/8 involved a real Work Order (not skipped), confirm the wheel's
       wear cost actually reached the manufacturing side, not just the Job Card:
   - [ ] Open that **Work Order** — its **Additional Operating Cost** should equal the
         sum of **Wheel Wear Cost** across all its non-cancelled Job Cards; check the
@@ -236,7 +263,7 @@ section right after Sections 3–9, while that Stock Entry and GL trail is still
 
 ---
 
-## 11. Sell Scrap From a Retired Wheel
+## 12. Sell Scrap From a Retired Wheel
 
 Some retired wheels have real scrap value (e.g. a recovered aluminum hub). This needs
 **Wheel Tracker Settings → Scrap Sales Account** set to a real Income account first —
@@ -245,7 +272,7 @@ set one now if it's blank.
 - [ ] Open **Wheel Scrap Sale** → New. Set **Buyer** (type a name that doesn't exist
       yet — a real Customer is created for you on save), **Company**, **Payment
       Account** (a real Cash or Bank account), and under **Wheels** add one row: the
-      Retired Wheel from Section 8 or 9, an **Amount**.
+      Retired Wheel from Section 9 or 10, an **Amount**.
 - [ ] Click into the **Wheel** field on a blank row and start typing. Expected: only
       Retired Wheels with unsold scrap show up — a Wheel that's In Stock, In Use, or
       already sold never appears in the picker at all.
@@ -262,7 +289,7 @@ set one now if it's blank.
       sold twice.
 - [ ] Try adding a Wheel that's still **In Stock** or **In Use** (not Retired) to a new
       Wheel Scrap Sale. Expected: a clear validation error, nothing saves.
-- [ ] **Bulk case**: retire a second Wheel (Section 9), create one more Wheel Scrap
+- [ ] **Bulk case**: retire a second Wheel (Section 10), create one more Wheel Scrap
       Sale with *both* Retired Wheels as separate rows, different Amounts each.
       Submit. Expected: **Total Amount** is the sum of both rows, and the resulting
       Journal Entry's debit/credit both equal that same sum — one JE for the whole
@@ -277,7 +304,7 @@ set one now if it's blank.
 
 ---
 
-## 12. Reorder Alerts
+## 13. Reorder Alerts
 
 - [ ] Open a Wheel Type, set **Reorder Point** higher than its current In-Stock count
       (check the real count first).
@@ -292,7 +319,7 @@ set one now if it's blank.
 
 ---
 
-## 13. Wheel Cost Summary Report
+## 14. Wheel Cost Summary Report
 
 - [ ] Open the **Wheel Cost Summary** report (under Reports on the workspace).
 - [ ] Set a wide date range covering the Measurement Events you've submitted above.
@@ -304,7 +331,7 @@ set one now if it's blank.
 
 ---
 
-## 14. Edit a Volume Formula (and See It Actually Change Numbers)
+## 15. Edit a Volume Formula (and See It Actually Change Numbers)
 
 - [ ] Open the **Wheel Shape** you used in Section 2 (the flat one). Note its current
       **Volume Formula** text and the resulting Original Volume on your Wheel Type.
@@ -321,7 +348,7 @@ set one now if it's blank.
 
 ---
 
-## 15. Bulk Import
+## 16. Bulk Import
 
 - [ ] Open **Bulk Import Wheels** (under Operations on the workspace).
 - [ ] Click **Download CSV Template**, confirm it downloads a real CSV with the
@@ -335,7 +362,7 @@ set one now if it's blank.
 
 ---
 
-## 16. Language Switch (English ⇄ Arabic)
+## 17. Language Switch (English ⇄ Arabic)
 
 - [ ] Open **Wheel Tracker Settings**, set **Language** to `Arabic`, save.
 - [ ] Expected: the page reloads itself automatically, and:
@@ -357,7 +384,7 @@ set one now if it's blank.
 
 ---
 
-## 17. Consumption % Bar (List Views)
+## 18. Consumption % Bar (List Views)
 
 - [ ] Open the **Measurement Event** or **Wheel** list view.
 - [ ] Expected: the **Consumption %** column shows an actual colored progress bar with

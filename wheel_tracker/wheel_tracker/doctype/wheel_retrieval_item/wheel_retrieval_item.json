@@ -1,0 +1,74 @@
+{
+ "actions": [],
+ "creation": "2026-10-15 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "wheel_type",
+  "item",
+  "item_name",
+  "current_stock_qty",
+  "qty_to_create"
+ ],
+ "fields": [
+  {
+   "columns": 3,
+   "description": "Pick directly, or use Get Items by Item Group above.",
+   "fieldname": "wheel_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Wheel Type",
+   "options": "Wheel Type",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "wheel_type.item",
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Item",
+   "options": "Item",
+   "read_only": 1
+  },
+  {
+   "columns": 3,
+   "fetch_from": "item.item_name",
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Item Name",
+   "read_only": 1
+  },
+  {
+   "columns": 2,
+   "description": "Bin's current quantity for this Item in the target Warehouse, for reference only.",
+   "fieldname": "current_stock_qty",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Already in System",
+   "read_only": 1
+  },
+  {
+   "columns": 2,
+   "description": "How many Wheels to create. Creates a new Material Receipt for this quantity — if this Item's stock is already recorded elsewhere, lower this (or remove the row) to avoid double-counting.",
+   "fieldname": "qty_to_create",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Quantity to Create",
+   "reqd": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-15 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Wheel Tracker",
+ "name": "Wheel Retrieval Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

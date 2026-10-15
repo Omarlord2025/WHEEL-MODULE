@@ -16,6 +16,7 @@
   "material",
   "column_break_head",
   "item",
+  "item_name",
   "disabled",
   "legacy_spec_name",
   "section_break_dims",
@@ -133,6 +134,14 @@
    "options": "Item",
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "fetch_from": "item.item_name",
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Item Name",
+   "read_only": 1
   },
   {
    "default": "0",

@@ -172,6 +172,17 @@
    "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Wheel Retrieval",
+   "link_count": 0,
+   "link_to": "Wheel Retrieval",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Bulk Import Wheels",
    "link_count": 0,
    "link_to": "wheel-bulk-import",
@@ -210,7 +221,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-15 15:49:31.876117",
+ "modified": "2026-10-15 21:00:00.000000",
  "modified_by": "Administrator",
  "module": "Wheel Tracker",
  "name": "Grinding Wheels",
