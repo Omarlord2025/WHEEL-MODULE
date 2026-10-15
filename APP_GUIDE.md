@@ -80,8 +80,13 @@ handles itself (see above).
 ## 8. Selling Scrap From a Retired Wheel
 
 Some retired wheels have real scrap value — a recovered aluminum hub, for example.
-File a **Wheel Scrap Sale** for it: pick the Retired Wheel (or several, for a bulk
-sale — one row each), the amount, and which Cash/Bank account the money came into.
+File a **Wheel Scrap Sale** for it: pick the Buyer (a real Customer — typed in fresh,
+it's created for you), which Cash/Bank account the money came into, and the Retired
+Wheel (or several, for a bulk sale — one row each) with its amount. The Wheel picker
+only offers Retired Wheels that don't already have their scrap sold, so you can't pick
+the wrong one by mistake. Selling several at once, use the **Get Retired Wheels**
+button to fill the whole table in one click instead of looking each one up by hand —
+it's safe to click again later, it only adds wheels that aren't already in the table.
 Submitting it creates a real, submitted **Journal Entry** crediting the **Scrap Sales
 Account** set on Wheel Tracker Settings — set that once before the first sale, or it's
 blocked with a clear message telling you to. The same wheel's scrap can't be sold

@@ -6,9 +6,14 @@ from frappe.tests.utils import FrappeTestCase
 from frappe.utils import flt
 
 from wheel_tracker.test_helpers import cleanup_wheel_tracker_records, make_wheel, make_wheel_type
+from wheel_tracker.wheel_tracker.doctype.wheel_scrap_sale.wheel_scrap_sale import (
+	get_retired_wheels_with_unsold_scrap,
+	retired_wheel_query,
+)
 
 CASH_ACCOUNT = "Cash - _TC"
 SCRAP_ACCOUNT = "Sales - _TC"
+BUYER = "_Test Wheel Scrap Buyer"
 
 
 class TestWheelScrapSale(FrappeTestCase):
@@ -18,6 +23,17 @@ class TestWheelScrapSale(FrappeTestCase):
 			"Wheel Tracker Settings", "scrap_sales_account"
 		)
 		frappe.db.set_single_value("Wheel Tracker Settings", "scrap_sales_account", SCRAP_ACCOUNT)
+		if not frappe.db.exists("Customer", BUYER):
+			customer = frappe.get_doc(
+				{
+					"doctype": "Customer",
+					"customer_name": BUYER,
+					"customer_group": "_Test Customer Group",
+					"territory": "_Test Territory",
+				}
+			)
+			customer.flags.ignore_mandatory = True
+			customer.insert(ignore_permissions=True)
 
 	def tearDown(self):
 		cleanup_wheel_tracker_records(self._created)
@@ -39,6 +55,7 @@ class TestWheelScrapSale(FrappeTestCase):
 			"doctype": "Wheel Scrap Sale",
 			"posting_date": frappe.utils.today(),
 			"company": "_Test Company",
+			"buyer": BUYER,
 			"payment_account": CASH_ACCOUNT,
 			"wheels": [{"wheel": w, "amount": a} for w, a in wheels_and_amounts],
 		}
@@ -105,3 +122,30 @@ class TestWheelScrapSale(FrappeTestCase):
 		frappe.db.set_single_value("Wheel Tracker Settings", "scrap_sales_account", None)
 		wheel = self.make_retired_wheel()
 		self.assertRaises(frappe.ValidationError, self.make_sale, [(wheel.name, 50)])
+
+	def test_retired_wheel_query_excludes_already_sold_scrap(self):
+		unsold = self.make_retired_wheel()
+		sold = self.make_retired_wheel()
+		sale = self.make_sale([(sold.name, 60)])
+		sale.submit()
+
+		names = {row[0] for row in retired_wheel_query("Wheel", "", "name", 0, 20, {})}
+		self.assertIn(unsold.name, names)
+		self.assertNotIn(sold.name, names)
+
+	def test_retired_wheel_query_excludes_wheels_not_retired(self):
+		wt = self.track(make_wheel_type())
+		in_stock_wheel = make_wheel(wt.name, status="In Stock")
+
+		names = {row[0] for row in retired_wheel_query("Wheel", "", "name", 0, 20, {})}
+		self.assertNotIn(in_stock_wheel.name, names)
+
+	def test_get_retired_wheels_with_unsold_scrap_excludes_already_sold(self):
+		unsold = self.make_retired_wheel()
+		sold = self.make_retired_wheel()
+		sale = self.make_sale([(sold.name, 60)])
+		sale.submit()
+
+		names = {row.wheel for row in get_retired_wheels_with_unsold_scrap()}
+		self.assertIn(unsold.name, names)
+		self.assertNotIn(sold.name, names)

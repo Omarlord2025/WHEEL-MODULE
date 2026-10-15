@@ -242,9 +242,16 @@ Some retired wheels have real scrap value (e.g. a recovered aluminum hub). This 
 **Wheel Tracker Settings → Scrap Sales Account** set to a real Income account first —
 set one now if it's blank.
 
-- [ ] Open **Wheel Scrap Sale** → New. Set **Company**, **Payment Account** (a real
-      Cash or Bank account), and under **Wheels** add one row: the Retired Wheel from
-      Section 8 or 9, an **Amount**.
+- [ ] Open **Wheel Scrap Sale** → New. Set **Buyer** (type a name that doesn't exist
+      yet — a real Customer is created for you on save), **Company**, **Payment
+      Account** (a real Cash or Bank account), and under **Wheels** add one row: the
+      Retired Wheel from Section 8 or 9, an **Amount**.
+- [ ] Click into the **Wheel** field on a blank row and start typing. Expected: only
+      Retired Wheels with unsold scrap show up — a Wheel that's In Stock, In Use, or
+      already sold never appears in the picker at all.
+- [ ] Click **Get Retired Wheels** (top of the form). Expected: every Retired Wheel
+      with unsold scrap gets added as a row automatically — click it again and nothing
+      duplicates, it only adds wheels not already in the table.
 - [ ] Submit. Expected:
   - [ ] **Total Amount** equals the row's Amount.
   - [ ] **Journal Entry** now links to a real, submitted Journal Entry — open it and

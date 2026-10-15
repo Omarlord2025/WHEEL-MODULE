@@ -82,9 +82,7 @@ class WheelScrapSale(Document):
 		je.voucher_type = "Journal Entry"
 		je.company = self.company
 		je.posting_date = self.posting_date
-		je.user_remark = _("Scrap sale {0}{1}").format(
-			self.name, f" — {self.buyer}" if self.buyer else ""
-		)
+		je.user_remark = _("Scrap sale {0} — {1}").format(self.name, self.buyer)
 		je.append(
 			"accounts",
 			{
@@ -104,3 +102,46 @@ class WheelScrapSale(Document):
 		je.insert(ignore_permissions=True)
 		je.submit()
 		return je
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def retired_wheel_query(doctype, txt, searchfield, start, page_len, filters):
+	"""Link-field query for the Wheels table — only offers Retired Wheels that
+	don't already have their scrap sold on a submitted Wheel Scrap Sale."""
+	return frappe.db.sql(
+		"""
+		select w.name from `tabWheel` w
+		where w.status = 'Retired'
+		and w.name like %(txt)s
+		and w.name not in (
+			select wssw.wheel from `tabWheel Scrap Sale Wheel` wssw
+			inner join `tabWheel Scrap Sale` wss on wss.name = wssw.parent
+			where wss.docstatus = 1
+		)
+		order by w.name
+		limit %(page_len)s offset %(start)s
+		""",
+		{"txt": f"%{txt}%", "start": start, "page_len": page_len},
+	)
+
+
+@frappe.whitelist()
+def get_retired_wheels_with_unsold_scrap():
+	"""Every Retired Wheel that isn't already on a submitted Wheel Scrap Sale —
+	used by the "Get Retired Wheels" button on the form to bulk-populate the
+	Wheels table instead of looking each one up by hand."""
+	return frappe.db.sql(
+		"""
+		select w.name as wheel
+		from `tabWheel` w
+		where w.status = 'Retired'
+		and w.name not in (
+			select wssw.wheel from `tabWheel Scrap Sale Wheel` wssw
+			inner join `tabWheel Scrap Sale` wss on wss.name = wssw.parent
+			where wss.docstatus = 1
+		)
+		order by w.name
+		""",
+		as_dict=True,
+	)

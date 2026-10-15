@@ -1,7 +1,21 @@
 # PRD — Resharpening Wheel (Diamond/CBN Wheel) Tracking Module
 **App target:** ERPNext v15 / Frappe Framework, hardcoded custom app (code-based doctypes, version-controlled)
 **Company:** CNC Leaders
-**Status:** Draft v27 — Wheel Scrap Sale: real accounting for scrap recovered from Retired Wheels
+**Status:** Draft v28 — Wheel Scrap Sale refinements: mandatory Buyer, Retired-only picker, bulk-fetch button, grid fix
+
+---
+
+## v28 — Wheel Scrap Sale refinements
+
+Follow-up feedback on v27, five fixes in one round:
+
+1. **Buyer is now a mandatory `Link` to `Customer`**, not free text — "the buyer to be recorded in the system." `create_scrap_journal_entry()` deliberately does *not* set `party_type`/`party` on the Journal Entry's `accounts` rows: `payment_account` and `scrap_sales_account` are Cash/Bank/Income accounts, and ERPNext's own `Journal Entry.validate_party()` throws if a row's `party_type` resolves to a different `account_type` than the account (Customer → Receivable, mismatched against Cash/Income) — tried it, confirmed it breaks submission, reverted. The buyer's traceability lives in the Link field itself and the JE's `user_remark` instead.
+2. **The Wheel field in the `wheels` child table is now filtered to Retired Wheels with unsold scrap only** — `frm.set_query` on the client pointing at a new whitelisted `retired_wheel_query`, so you can't even pick the wrong Wheel in the picker, not just get rejected on save. `validate_wheels()` remains the real enforcement; this is UX on top of it.
+3. **New "Get Retired Wheels" button** bulk-fetches every Retired Wheel with unsold scrap (`get_retired_wheels_with_unsold_scrap`, same exclusion SQL as the query above) and adds them as rows in one click — skips wheels already in the table client-side, so clicking it twice doesn't duplicate rows.
+4. **Fixed the Amount column not displaying** in the `Wheel Scrap Sale Wheel` grid — root cause: Frappe's grid (`setup_visible_columns()`) reserves 1 unit for the row-number/checkbox column and *silently drops* any further `in_list_view` column once the running total of `columns` would exceed 11, rather than wrapping or scrolling. The four visible columns (`wheel`, `description`, `weight`, `amount`) summed to 12 — one over budget — so `amount` was dropped with no error, anywhere. Fixed by reducing `wheel`'s width from 4 to 3 (total 11, exactly at budget) and dropping `wheel_type` from `in_list_view` (kept as a read-only fetched field, just not a grid column).
+5. **Confirmed the Arabic translation for the Scrap Sales Account setting's description was already correct** server-side (exact string match verified three ways) — the reported "not translated" was a browser boot-cache timing issue (translation added after the user's last page load), not a code bug.
+
+Verified live: 10/10 Wheel Scrap Sale tests plus 2 new ones for the query/bulk-fetch exclusion logic, full `wheel_tracker` suite (95 tests) still green, and a real headless-browser pass against the running site — confirmed the Buyer field renders as a mandatory Link, the Get Retired Wheels button correctly excludes an already-sold wheel and is idempotent on a second click, the Wheel picker's `search_link` call returns only Retired-with-unsold-scrap wheels, the Amount column is visible with correct values, and every string above renders in Arabic with Wheel Tracker Settings' language switched.
 
 ---
 
@@ -11,7 +25,7 @@ Customer request: a way to record selling scrap (e.g. recovered aluminum) found 
 
 **New Single setting**: `Wheel Tracker Settings.scrap_sales_account` (Link → Account) — the income account credited on every scrap sale. Left blank, creating a Wheel Scrap Sale is blocked immediately with a clear error rather than silently posting to the wrong account or no account at all.
 
-**New submittable doctype `Wheel Scrap Sale`**: `company`, `posting_date`, `payment_account` (the Cash/Bank account debited), optional free-text `buyer` (not a real Customer — scrap buyers are often informal, cash transactions), and a child table `wheels` (`Wheel Scrap Sale Wheel`: Wheel + description + weight + amount per row). One row covers a single wheel's scrap; several rows in the same document cover a bulk sale — deliberately not two separate doctypes or a bulk-import flow, since a child table already does both naturally. `total_amount` sums the rows.
+**New submittable doctype `Wheel Scrap Sale`**: `company`, `posting_date`, `payment_account` (the Cash/Bank account debited), `buyer` (originally free text, made a mandatory Customer Link in v28 below), and a child table `wheels` (`Wheel Scrap Sale Wheel`: Wheel + description + weight + amount per row). One row covers a single wheel's scrap; several rows in the same document cover a bulk sale — deliberately not two separate doctypes or a bulk-import flow, since a child table already does both naturally. `total_amount` sums the rows.
 
 **On submit**, creates and submits one real Journal Entry per sale — debiting `payment_account`, crediting Wheel Tracker Settings' `scrap_sales_account`, for the row total — reusing the Company's own default Cost Center the same way ERPNext's own documents do. On cancel, the linked Journal Entry is cancelled too. This is the same "real ERPNext document, not a parallel bookkeeping system" principle as the rest of this app (PRD v10) — scrap revenue shows up in the real General Ledger, not just as a field inside Wheel Tracker.
 

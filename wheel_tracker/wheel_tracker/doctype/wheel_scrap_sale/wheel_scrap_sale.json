@@ -49,10 +49,13 @@
    "fieldtype": "Column Break"
   },
   {
-   "description": "Free text — who bought the scrap. Not required to be an ERPNext Customer.",
+   "description": "A real Customer record — created on the fly from this field if the buyer doesn't exist yet.",
    "fieldname": "buyer",
-   "fieldtype": "Data",
-   "label": "Buyer"
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Buyer",
+   "options": "Customer",
+   "reqd": 1
   },
   {
    "description": "Cash or Bank account the sale proceeds were received into — debited when this is submitted.",
