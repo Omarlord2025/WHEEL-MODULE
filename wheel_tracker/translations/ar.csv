@@ -280,6 +280,8 @@
 "Every matching Wheel Type is already in this table.","كل نوع حجر مطابق موجود بالفعل في هذا الجدول."
 "Every retrieved Wheel is placed into this Warehouse.","يُوضع كل حجر مسترجع في هذا المستودع."
 "Get Items","جلب الأصناف"
+"No enabled Wheel Type exists yet — create one first.","لا يوجد أي نوع حجر مفعّل بعد — أنشئ واحداً أولاً."
+"No enabled Wheel Type was found under Item Group {0}.","لم يُعثر على أي نوع حجر مفعّل ضمن مجموعة الصنف {0}."
 "How many Wheels to create. Creates a new Material Receipt for this quantity — if this Item's stock is already recorded elsewhere, lower this (or remove the row) to avoid double-counting.","عدد الأحجار المطلوب إنشاؤها. يُنشئ حركة استلام مواد جديدة بهذه الكمية — إذا كان رصيد هذا الصنف مسجلاً بالفعل في مكان آخر، قلّل هذه الكمية (أو احذف الصف) لتفادي الاحتساب المزدوج."
 "Item Group","مجموعة الصنف"
 "Item Name","اسم الصنف"

@@ -11,8 +11,18 @@ frappe.ui.form.on("Wheel Retrieval", {
 			method: "wheel_tracker.wheel_tracker.doctype.wheel_retrieval.wheel_retrieval.get_items_by_group",
 			args: { item_group: frm.doc.item_group, warehouse: frm.doc.warehouse },
 			callback: (r) => {
+				const matches = r.message || [];
+				if (!matches.length) {
+					frappe.msgprint(
+						frm.doc.item_group
+							? __("No enabled Wheel Type was found under Item Group {0}.", [frm.doc.item_group])
+							: __("No enabled Wheel Type exists yet — create one first.")
+					);
+					return;
+				}
+
 				const already_listed = new Set((frm.doc.items || []).map((row) => row.wheel_type));
-				const to_add = (r.message || []).filter((row) => !already_listed.has(row.wheel_type));
+				const to_add = matches.filter((row) => !already_listed.has(row.wheel_type));
 
 				if (!to_add.length) {
 					frappe.msgprint(__("Every matching Wheel Type is already in this table."));
