@@ -1,7 +1,23 @@
 # PRD — Resharpening Wheel (Diamond/CBN Wheel) Tracking Module
 **App target:** ERPNext v15 / Frappe Framework, hardcoded custom app (code-based doctypes, version-controlled)
 **Company:** CNC Leaders
-**Status:** Draft v26 — the v22 cache-busting fix silently broke every doctype_js/doctype_list_js script site-wide; fixed
+**Status:** Draft v27 — Wheel Scrap Sale: real accounting for scrap recovered from Retired Wheels
+
+---
+
+## v27 — Wheel Scrap Sale
+
+Customer request: a way to record selling scrap (e.g. recovered aluminum) found in retired wheels, with a configurable account for the proceeds, and a doctype that works for one wheel or many at once. Confirmed two design decisions before building: the accounting side is a real **Journal Entry** (not a Sales Invoice — no Customer/Item overhead needed for an informal cash-for-scrap transaction), and each sale **links back to the specific Wheel(s)** it came from, not just a lump-sum amount.
+
+**New Single setting**: `Wheel Tracker Settings.scrap_sales_account` (Link → Account) — the income account credited on every scrap sale. Left blank, creating a Wheel Scrap Sale is blocked immediately with a clear error rather than silently posting to the wrong account or no account at all.
+
+**New submittable doctype `Wheel Scrap Sale`**: `company`, `posting_date`, `payment_account` (the Cash/Bank account debited), optional free-text `buyer` (not a real Customer — scrap buyers are often informal, cash transactions), and a child table `wheels` (`Wheel Scrap Sale Wheel`: Wheel + description + weight + amount per row). One row covers a single wheel's scrap; several rows in the same document cover a bulk sale — deliberately not two separate doctypes or a bulk-import flow, since a child table already does both naturally. `total_amount` sums the rows.
+
+**On submit**, creates and submits one real Journal Entry per sale — debiting `payment_account`, crediting Wheel Tracker Settings' `scrap_sales_account`, for the row total — reusing the Company's own default Cost Center the same way ERPNext's own documents do. On cancel, the linked Journal Entry is cancelled too. This is the same "real ERPNext document, not a parallel bookkeeping system" principle as the rest of this app (PRD v10) — scrap revenue shows up in the real General Ledger, not just as a field inside Wheel Tracker.
+
+**Validation, all server-side, none optional**: every Wheel row must currently be `Retired` (you can't scrap a wheel still In Stock or In Use); no Wheel can appear twice in the same sale; no Wheel's scrap can be sold twice across *any* non-cancelled Wheel Scrap Sale (a direct SQL check joining the child table back to its parent's `docstatus`) — cancelling a sale lifts that block, since the Wheel genuinely hasn't been sold anymore; every row's Amount must be positive.
+
+Verified via 7 new automated tests (single-wheel sale, bulk multi-wheel sale summing correctly into one Journal Entry, cancellation reversing it, rejecting a non-Retired wheel, rejecting a duplicate wheel within one sale, rejecting re-selling an already-sold wheel's scrap, and the blocked-without-a-configured-account case) plus a live end-to-end run against the real `CNC Leaders` company and a real Retired Wheel — confirmed the actual Journal Entry's debit/credit lines, the duplicate-sale rejection message, and that cancelling correctly reversed the Journal Entry (`docstatus` → 2). 92 tests passing, clean migrate.
 
 ---
 

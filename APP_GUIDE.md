@@ -77,7 +77,17 @@ otherwise unsafe — file a **Wheel Retirement** for it directly, with a reason.
 now specifically the path for early/damage retirement; a wheel that simply ran out
 handles itself (see above).
 
-## 8. Undoing a Mistake
+## 8. Selling Scrap From a Retired Wheel
+
+Some retired wheels have real scrap value — a recovered aluminum hub, for example.
+File a **Wheel Scrap Sale** for it: pick the Retired Wheel (or several, for a bulk
+sale — one row each), the amount, and which Cash/Bank account the money came into.
+Submitting it creates a real, submitted **Journal Entry** crediting the **Scrap Sales
+Account** set on Wheel Tracker Settings — set that once before the first sale, or it's
+blocked with a clear message telling you to. The same wheel's scrap can't be sold
+twice; cancelling a Wheel Scrap Sale cancels its Journal Entry too.
+
+## 9. Undoing a Mistake
 
 - **Cancelling a Measurement Event** reverses everything it did: the Wheel's
   dimensions and status go back to what they were before. If it auto-retired the Wheel
@@ -86,14 +96,16 @@ handles itself (see above).
   is cancelled instead.
 - **Cancelling a Wheel Retirement** directly brings the Wheel back to In Stock and
   cancels its Material Issue.
+- **Cancelling a Wheel Scrap Sale** cancels its Journal Entry — the wheel's scrap can
+  then be sold again if needed.
 
-## 9. Reorder Alerts
+## 10. Reorder Alerts
 
 Once a day, the system checks every Wheel Type's In Stock count against its Reorder
 Point. If it's fallen below that, an alert goes out (Notification Log, and email if
 enabled) until stock is replenished.
 
-## 10. Common Questions
+## 11. Common Questions
 
 **"Why is this Wheel Retired and I didn't retire it?"**
 Check the Measurement Event that caused it — it has an **Auto-Created Wheel
@@ -105,7 +117,7 @@ review it and submit it to confirm.
 Its Wheel Type doesn't Require Measurement — some shapes (like thin slitting wheels)
 are tracked as simply usable/not-usable instead. Use Wheel Retirement for those.
 
-## 11. Switching Between English and Arabic
+## 12. Switching Between English and Arabic
 
 Open **Wheel Tracker Settings** and set **Language** to English or Arabic, then save —
 your own page reloads right away to show it. This only switches Wheel Tracker's own
@@ -114,14 +126,14 @@ personal language preference, and the rest of Desk (Sales Orders, Customers, eve
 outside this module) is completely unaffected. Everyone sees the same choice the next
 time they load a page, regardless of their own language setting elsewhere in the system.
 
-## 12. Reading the Consumption % Bar
+## 13. Reading the Consumption % Bar
 
 Wherever you see a Consumption % bar in a list (Wheel, Measurement Event), it now shows
 the percentage as a number on the bar itself, colored green under 70%, orange from
 70–90%, and red at 90% and above — a quick visual read on which wheels are closest to
 retiring.
 
-## 13. Where to Go Next
+## 14. Where to Go Next
 
 - `CLAUDE.md` — engineering rules and design principles, for developers.
 - `PRD.md` — the full spec and formula history, if you need the "why" behind a number.

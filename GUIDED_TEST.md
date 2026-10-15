@@ -5,9 +5,10 @@ Check each box as you go. If a step doesn't match its expected result, stop and 
 exactly what you saw instead — that's a real bug report, not a guess.
 
 Each section is independent where possible, but Sections 2–9 build on each other in
-order (you're following one wheel's life from arrival to retirement). You can skip
-Section 1 if master data already exists, and Sections 10–15 can be done in any order
-once Section 1 is done.
+order (you're following one wheel's life from arrival to retirement), and Sections 10
+and 11 check the accounting trail those same actions should have left behind — do them
+right after Section 9, not later. You can skip Section 1 if master data already
+exists, and Sections 12–17 can be done in any order once Section 1 is done.
 
 Where to find everything: Desk → **Grinding Wheels** workspace.
 
@@ -35,7 +36,7 @@ workspace. You only need one of each to run the rest of this test.
       (e.g. `1V1`). Confirm each has:
   - [ ] A **Wheel Geometry** link set (flat → `Flat / Straight`, profiled → `Profiled / Angled`).
   - [ ] A **Volume Formula** field with real Python text in it (not blank) — see
-        Section 12 for what this does and how to test editing it.
+        Section 14 for what this does and how to test editing it.
   - [ ] A reference photo showing under **Shape Image** (not a raw link/URL).
 - [ ] **Wheel Material**, **Wheel Grit**, **Wheel Concentration**, **Wheel Bond**: at
       least one record each exists (these feed the Spec Codes section of Wheel Type).
@@ -190,7 +191,86 @@ and note it as skipped, not failed.
 
 ---
 
-## 10. Reorder Alerts
+## 10. Checking the Accounting Side (Stock Ledger & General Ledger)
+
+Wheel Tracker deliberately builds on real ERPNext Stock Entries — a wheel's arrival and
+retirement are supposed to be genuine accounting events, not just field changes inside
+this app. This section only applies if your Company has **Enable Perpetual Inventory**
+checked (Company → Accounts tab); if it's off, skip to Section 12 and note why. Do this
+section right after Sections 3–9, while that Stock Entry and GL trail is still fresh.
+
+- [ ] Open the Material Receipt Stock Entry from Section 3. Confirm:
+  - [ ] Its **GL Entries** (Stock Entry → View → Accounting Ledger) show a debit to
+        **Stock In Hand** and a matching credit to **Stock Adjustment** (or to a
+        Purchase document's own payable-side account, if one was behind it instead of
+        a bare Material Receipt), for Qty × the Wheel Type's **Unit Cost**.
+  - [ ] Each new Wheel's backing **Serial No** record (Stock → Serial No) shows a
+        **Purchase Rate** matching that same Unit Cost — check one of the 3 Wheels
+        from Section 3 directly, not just the Stock Entry total.
+- [ ] Open the submitted Wheel Retirement / Material Issue from Section 8 or 9.
+      Confirm:
+  - [ ] Its GL Entries are the mirror image — a credit to **Stock In Hand**, a debit
+        to **Stock Adjustment** — at the *same* valuation as the matching receipt
+        (ERPNext's own valuation method decides this; check the actual number instead
+        of assuming it matches).
+  - [ ] **Stock → Bin** for that Item/Warehouse shows **actual_qty** down by exactly 1
+        since Section 3, and **Stock Value** down by the same valuation amount.
+- [ ] Run core ERPNext's **Stock Balance** report, filtered to the Wheel Type's Item
+      and your test Warehouse. Confirm the running qty/value after your Section 3/8/9
+      actions matches what you'd expect by hand (received 3, issued however many you
+      retired).
+- [ ] Run **General Ledger**, filtered to the **Stock In Hand** account, for this same
+      date range. Confirm every Wheel Tracker-driven Material Receipt/Material Issue
+      from this test shows up as its own real GL Entry, and that these numbers
+      reconcile with the Stock Balance report above — a mismatch here is a real
+      accounting bug, not a Wheel Tracker display issue.
+- [ ] If Section 4/7 involved a real Work Order (not skipped), confirm the wheel's
+      wear cost actually reached the manufacturing side, not just the Job Card:
+  - [ ] Open that **Work Order** — its **Additional Operating Cost** should equal the
+        sum of **Wheel Wear Cost** across all its non-cancelled Job Cards; check the
+        actual arithmetic, don't just confirm it's non-zero.
+  - [ ] If that Work Order's own Manufacture Stock Entry has been submitted, the
+        Finished Good's resulting valuation rate should reflect this cost — compare it
+        against (BOM cost + normal operating cost + this additional operating cost) ÷
+        manufactured quantity.
+
+---
+
+## 11. Sell Scrap From a Retired Wheel
+
+Some retired wheels have real scrap value (e.g. a recovered aluminum hub). This needs
+**Wheel Tracker Settings → Scrap Sales Account** set to a real Income account first —
+set one now if it's blank.
+
+- [ ] Open **Wheel Scrap Sale** → New. Set **Company**, **Payment Account** (a real
+      Cash or Bank account), and under **Wheels** add one row: the Retired Wheel from
+      Section 8 or 9, an **Amount**.
+- [ ] Submit. Expected:
+  - [ ] **Total Amount** equals the row's Amount.
+  - [ ] **Journal Entry** now links to a real, submitted Journal Entry — open it and
+        confirm it debits your **Payment Account** and credits the **Scrap Sales
+        Account** from Settings, both for the exact same amount.
+- [ ] Try creating a *second* Wheel Scrap Sale for the *same* Wheel. Expected: a clear
+      "already sold" error naming the first sale — the same wheel's scrap can't be
+      sold twice.
+- [ ] Try adding a Wheel that's still **In Stock** or **In Use** (not Retired) to a new
+      Wheel Scrap Sale. Expected: a clear validation error, nothing saves.
+- [ ] **Bulk case**: retire a second Wheel (Section 9), create one more Wheel Scrap
+      Sale with *both* Retired Wheels as separate rows, different Amounts each.
+      Submit. Expected: **Total Amount** is the sum of both rows, and the resulting
+      Journal Entry's debit/credit both equal that same sum — one JE for the whole
+      bulk sale, not one per wheel.
+- [ ] Cancel one of your submitted Wheel Scrap Sales. Expected: its Journal Entry gets
+      cancelled too (check the JE's own docstatus), and that Wheel can now be put into
+      a *new* Wheel Scrap Sale again (the "already sold" block only applies to
+      non-cancelled sales).
+- [ ] Temporarily clear **Scrap Sales Account** on Wheel Tracker Settings, try creating
+      a new Wheel Scrap Sale. Expected: blocked immediately with a clear error, not a
+      silent save or a post to the wrong account. Put the account back afterward.
+
+---
+
+## 12. Reorder Alerts
 
 - [ ] Open a Wheel Type, set **Reorder Point** higher than its current In-Stock count
       (check the real count first).
@@ -205,7 +285,7 @@ and note it as skipped, not failed.
 
 ---
 
-## 11. Wheel Cost Summary Report
+## 13. Wheel Cost Summary Report
 
 - [ ] Open the **Wheel Cost Summary** report (under Reports on the workspace).
 - [ ] Set a wide date range covering the Measurement Events you've submitted above.
@@ -217,7 +297,7 @@ and note it as skipped, not failed.
 
 ---
 
-## 12. Edit a Volume Formula (and See It Actually Change Numbers)
+## 14. Edit a Volume Formula (and See It Actually Change Numbers)
 
 - [ ] Open the **Wheel Shape** you used in Section 2 (the flat one). Note its current
       **Volume Formula** text and the resulting Original Volume on your Wheel Type.
@@ -234,7 +314,7 @@ and note it as skipped, not failed.
 
 ---
 
-## 13. Bulk Import
+## 15. Bulk Import
 
 - [ ] Open **Bulk Import Wheels** (under Operations on the workspace).
 - [ ] Click **Download CSV Template**, confirm it downloads a real CSV with the
@@ -248,7 +328,7 @@ and note it as skipped, not failed.
 
 ---
 
-## 14. Language Switch (English ⇄ Arabic)
+## 16. Language Switch (English ⇄ Arabic)
 
 - [ ] Open **Wheel Tracker Settings**, set **Language** to `Arabic`, save.
 - [ ] Expected: the page reloads itself automatically, and:
@@ -270,7 +350,7 @@ and note it as skipped, not failed.
 
 ---
 
-## 15. Consumption % Bar (List Views)
+## 17. Consumption % Bar (List Views)
 
 - [ ] Open the **Measurement Event** or **Wheel** list view.
 - [ ] Expected: the **Consumption %** column shows an actual colored progress bar with

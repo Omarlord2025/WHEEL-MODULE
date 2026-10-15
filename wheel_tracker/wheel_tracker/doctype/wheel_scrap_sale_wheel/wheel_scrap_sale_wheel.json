@@ -1,0 +1,72 @@
+{
+ "actions": [],
+ "creation": "2026-10-15 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "wheel",
+  "wheel_type",
+  "description",
+  "weight",
+  "amount"
+ ],
+ "fields": [
+  {
+   "columns": 3,
+   "description": "Must be a Retired Wheel — can't scrap one still In Stock or In Use.",
+   "fieldname": "wheel",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Wheel",
+   "options": "Wheel",
+   "reqd": 1
+  },
+  {
+   "columns": 2,
+   "fetch_from": "wheel.wheel_type",
+   "fieldname": "wheel_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Wheel Type",
+   "options": "Wheel Type",
+   "read_only": 1
+  },
+  {
+   "columns": 3,
+   "description": "e.g. aluminum hub",
+   "fieldname": "description",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Description"
+  },
+  {
+   "columns": 2,
+   "fieldname": "weight",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Weight (kg)",
+   "precision": "3"
+  },
+  {
+   "columns": 2,
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount",
+   "reqd": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-15 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Wheel Tracker",
+ "name": "Wheel Scrap Sale Wheel",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

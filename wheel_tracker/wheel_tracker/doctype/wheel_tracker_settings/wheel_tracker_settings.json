@@ -8,6 +8,8 @@
   "send_email_alerts",
   "column_break_1",
   "usable_volume_floor_percent",
+  "section_break_scrap",
+  "scrap_sales_account",
   "section_break_language",
   "language"
  ],
@@ -40,6 +42,18 @@
    "reqd": 1
   },
   {
+   "fieldname": "section_break_scrap",
+   "fieldtype": "Section Break",
+   "label": "Scrap Sales"
+  },
+  {
+   "description": "Income account credited when a Wheel Scrap Sale is submitted — e.g. recovered aluminum sold off a retired Wheel. Left blank, creating a Wheel Scrap Sale is blocked with a clear error rather than posting to the wrong account by default.",
+   "fieldname": "scrap_sales_account",
+   "fieldtype": "Link",
+   "label": "Scrap Sales Account",
+   "options": "Account"
+  },
+  {
    "fieldname": "section_break_language",
    "fieldtype": "Section Break",
    "label": "Language"
@@ -56,7 +70,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-10-09 01:57:42.865421",
+ "modified": "2026-10-15 15:47:16.323918",
  "modified_by": "Administrator",
  "module": "Wheel Tracker",
  "name": "Wheel Tracker Settings",

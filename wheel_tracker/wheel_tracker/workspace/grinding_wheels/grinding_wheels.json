@@ -161,6 +161,17 @@
    "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Wheel Scrap Sale",
+   "link_count": 0,
+   "link_to": "Wheel Scrap Sale",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Bulk Import Wheels",
    "link_count": 0,
    "link_to": "wheel-bulk-import",
@@ -199,7 +210,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-09 03:17:53.217224",
+ "modified": "2026-10-15 15:49:31.876117",
  "modified_by": "Administrator",
  "module": "Wheel Tracker",
  "name": "Grinding Wheels",
