@@ -1,7 +1,21 @@
 # PRD — Resharpening Wheel (Diamond/CBN Wheel) Tracking Module
 **App target:** ERPNext v15 / Frappe Framework, hardcoded custom app (code-based doctypes, version-controlled)
 **Company:** CNC Leaders
-**Status:** Draft v29 — Wheel Retrieval: onboard already-in-stock wheels; Item Name on Wheel Type; Wheel Scrap Sale Company field fix
+**Status:** Draft v30 — Default Warehouse + stock-linked Wheel creation, wear-cost Journal Entries, Factory Wheel Code numbering control, Measurement Event save fix
+
+---
+
+## v30 — Default Warehouse, wear-cost accounting, Factory Wheel Code numbering, a real save bug
+
+Customer feedback, five parts (clarified over 16 questions before building, given how much of this touches real inventory/accounting data):
+
+1. **Fixed a real bug blocking every Measurement Event save**: `confirmed_volume` was marked both `read_only` and `reqd` — it's only ever computed inside `validate()`, so on a brand-new record it's blank, and Frappe's client-side mandatory check blocked the Save click before the request even reached the server to compute it. Every other computed field in this app (Wheel Scrap Sale's `total_amount`, Wheel Retrieval's `total_qty`) is read-only *without* `reqd`; this was the one outlier. Fixed by dropping `reqd`.
+2. **`Wheel Tracker Settings` gained three fields**: `default_warehouse` (every Wheel this module creates or auto-detects lives here), `wheel_asset_account` and `wheel_wear_cost_account` (the two sides of the new wear-cost Journal Entry below). All three are optional — leaving them blank disables the behavior they gate rather than blocking anything.
+3. **Stock entering the Default Warehouse now requires a Wheel Type first.** `validate_default_warehouse_requires_wheel_type()` (new Stock Entry `validate` hook) blocks any row landing there for an Item with no matching Wheel Type — "these wheels can't be imaginary." Wheel creation on receipt was generalized past Material Receipt: `row_is_inward_wheel_receipt()` now also covers any *purely inward* row (t_warehouse set, s_warehouse blank — a Repack/Manufacture output row) landing in the Default Warehouse, beating core's mandatory-serial check the same way Material Receipt always has. Deliberately excludes a genuine Material Transfer leg (both s_warehouse and t_warehouse set) — that row is moving stock that must already carry real serials; minting fresh ones there broke ERPNext's own stock ledger processing (`Inward` vs `Outward` Serial and Batch Bundle type mismatch) when first tried, and conceptually a transfer can't invent new Wheels anyway. Every other Warehouse keeps today's lenient, silent-skip behavior unchanged.
+4. **Measurement Event now posts a real wear-cost Journal Entry on submit** (`create_wear_cost_journal_entry()`) — debits `wheel_wear_cost_account`, credits `wheel_asset_account`, for that event's `job_cost`. Quiet, not blocking: skipped (not an error) if either account isn't configured, Job Cost is zero (a re-measurement with no new wear), or the Wheel has no Warehouse (no Company to post against). Cancelled with the event. Going forward only — no backfill for existing measurement history, confirmed with the customer.
+5. **Factory Wheel Code**: manual override already worked (free text, unique, `Wheel.autoname()` only auto-generates when blank) — nothing to change there. New: `Wheel Type.start_numbering_from` (required, defaults to 1) floors the auto-numbering sequence; raising it later takes effect immediately on the next generated code, never lowers an already-higher running number. A manually-typed code matching the Wheel Type's own numbering prefix (`sync_series_with_manual_code()`) bumps that same counter, so auto-numbering continues on from the override instead of eventually colliding with it. Both paths share one `ensure_series_at_least()` helper, written as raw SQL throughout — `tabSeries` is a minimal internal table (name/current only, no owner/creation/modified), and `frappe.db.get_value`/`set_value` both default to an `order by modified` that table has no column for; this broke every test touching Wheel creation until caught and fixed.
+
+A known, bounded side effect of the previous customer-directed item cleanup (not new in this version): ERPNext's own core test fixtures (`_Test FG Item 2`, `_Test Item`, etc.) were deleted along with everything else, so `make_job_card()`-dependent tests (Job Card integration, Batch Measurement) currently fail on `Item ... not found` — unrelated to this version's changes, not fixed here, flagged to the customer.
 
 ---
 

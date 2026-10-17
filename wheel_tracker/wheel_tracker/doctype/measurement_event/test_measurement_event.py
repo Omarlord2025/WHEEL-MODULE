@@ -271,6 +271,20 @@ class TestMeasurementEventAutoRetirement(FrappeTestCase):
 		)
 		self.assertEqual(bin_qty, 1)
 
+	def test_confirmed_volume_not_mandatory_client_side(self):
+		"""Regression test: confirmed_volume was marked both read_only and reqd, which
+		blocks Frappe's client-side mandatory check before the server ever gets a chance
+		to compute it on a new record — Measurement Event could never actually be saved.
+		Asserts the schema itself no longer has that combination, since the symptom only
+		shows up in the browser, not a plain server-side insert()."""
+		meta = frappe.get_meta("Measurement Event")
+		confirmed_volume = meta.get_field("confirmed_volume")
+		self.assertFalse(
+			confirmed_volume.reqd,
+			"confirmed_volume is read-only and only ever set by validate() — marking it "
+			"reqd too blocks saving a new record client-side before validate() runs.",
+		)
+
 	def test_cancel_after_draft_was_reviewed_and_submitted_reverses_the_real_stock_issue(self):
 		event = make_measurement_event(self.wheel.name, diameter=60)
 		retirement_name = event.auto_retirement
@@ -293,3 +307,67 @@ class TestMeasurementEventAutoRetirement(FrappeTestCase):
 			"Bin", {"item_code": self.wheel_type.item, "warehouse": "_Test Warehouse - _TC"}, "actual_qty"
 		)
 		self.assertEqual(bin_qty, 1)
+
+
+ASSET_ACCOUNT = "Stock In Hand - _TC"
+WEAR_COST_ACCOUNT = "Cost of Goods Sold - _TC"
+
+
+class TestMeasurementEventWearCostJournalEntry(FrappeTestCase):
+	def setUp(self):
+		self._created = []
+		self._original_accounts = frappe.db.get_singles_dict("Wheel Tracker Settings")
+		frappe.db.set_single_value(
+			"Wheel Tracker Settings",
+			{"wheel_asset_account": ASSET_ACCOUNT, "wheel_wear_cost_account": WEAR_COST_ACCOUNT},
+		)
+		self.wheel_type = self.track(
+			make_wheel_type(original_diameter=100, original_inner_diameter=60, original_diamond_height=6)
+		)
+		self.wheel = make_wheel(self.wheel_type.name, warehouse="_Test Warehouse - _TC")
+
+	def tearDown(self):
+		cleanup_wheel_tracker_records(self._created)
+		frappe.db.set_single_value(
+			"Wheel Tracker Settings",
+			{
+				"wheel_asset_account": self._original_accounts.get("wheel_asset_account"),
+				"wheel_wear_cost_account": self._original_accounts.get("wheel_wear_cost_account"),
+			},
+		)
+
+	def track(self, doc):
+		self._created.append(doc.name)
+		return doc
+
+	def test_submitting_creates_a_wear_cost_journal_entry(self):
+		event = make_measurement_event(self.wheel.name, diameter=95)
+		self.assertTrue(event.journal_entry)
+
+		je = frappe.get_doc("Journal Entry", event.journal_entry)
+		self.assertEqual(je.docstatus, 1)
+		accounts = {row.account: row for row in je.accounts}
+		self.assertAlmostEqual(flt(accounts[WEAR_COST_ACCOUNT].debit_in_account_currency), flt(event.job_cost), places=2)
+		self.assertAlmostEqual(flt(accounts[ASSET_ACCOUNT].credit_in_account_currency), flt(event.job_cost), places=2)
+
+	def test_cancelling_reverses_the_journal_entry(self):
+		event = make_measurement_event(self.wheel.name, diameter=95)
+		je_name = event.journal_entry
+
+		event.cancel()
+		self.assertEqual(frappe.db.get_value("Journal Entry", je_name, "docstatus"), 2)
+
+	def test_skipped_when_accounts_not_configured(self):
+		frappe.db.set_single_value(
+			"Wheel Tracker Settings", {"wheel_asset_account": None, "wheel_wear_cost_account": None}
+		)
+		event = make_measurement_event(self.wheel.name, diameter=95)
+		self.assertFalse(event.journal_entry)
+
+	def test_skipped_when_job_cost_is_zero(self):
+		"""A re-measurement with no new wear since the last reading has
+		incremental_consumed_volume (and so job_cost) of zero — nothing to post."""
+		make_measurement_event(self.wheel.name, diameter=95)
+		event = make_measurement_event(self.wheel.name, diameter=95)
+		self.assertEqual(flt(event.job_cost), 0)
+		self.assertFalse(event.journal_entry)

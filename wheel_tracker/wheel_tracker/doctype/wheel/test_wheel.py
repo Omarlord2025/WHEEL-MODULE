@@ -6,6 +6,8 @@ from frappe.tests.utils import FrappeTestCase
 
 from wheel_tracker.wheel_tracker.doctype.wheel.wheel import (
 	assign_to_job_card,
+	generate_factory_wheel_code,
+	get_factory_wheel_code_prefix,
 	reinstate_wheel,
 	release_from_job_card,
 	retire_wheel,
@@ -148,3 +150,57 @@ class TestWheel(FrappeTestCase):
 		wheel = make_wheel(self.wheel_type.name)
 		status = reinstate_wheel(wheel.name)
 		self.assertEqual(status, "In Stock")
+
+
+class TestFactoryWheelCodeNumbering(FrappeTestCase):
+	def setUp(self):
+		self._created = []
+
+	def tearDown(self):
+		cleanup_wheel_tracker_records(self._created)
+
+	def track_type(self, doc):
+		self._created.append(doc.name)
+		return doc
+
+	def test_auto_generated_code_respects_start_numbering_from(self):
+		wheel_type = self.track_type(
+			make_wheel_type(
+				original_diameter=137, original_inner_diameter=60, original_diamond_height=13, start_numbering_from=500
+			)
+		)
+		code = generate_factory_wheel_code(wheel_type.name)
+		self.assertEqual(code, get_factory_wheel_code_prefix(wheel_type.name) + "0500")
+
+	def test_manual_override_is_used_as_is_and_is_unique(self):
+		wheel_type = self.track_type(
+			make_wheel_type(original_diameter=142, original_inner_diameter=60, original_diamond_height=14)
+		)
+		wheel = make_wheel(wheel_type.name, factory_wheel_code="MY-OWN-CODE-001")
+		self.assertEqual(wheel.name, "MY-OWN-CODE-001")
+
+		self.assertRaises(frappe.DuplicateEntryError, make_wheel, wheel_type.name, factory_wheel_code="MY-OWN-CODE-001")
+
+	def test_manual_override_bumps_the_counter_so_auto_numbering_continues_after_it(self):
+		wheel_type = self.track_type(
+			make_wheel_type(original_diameter=151, original_inner_diameter=60, original_diamond_height=15)
+		)
+		prefix = get_factory_wheel_code_prefix(wheel_type.name)
+
+		make_wheel(wheel_type.name, factory_wheel_code=prefix + "0100")
+		next_code = generate_factory_wheel_code(wheel_type.name)
+		self.assertEqual(next_code, prefix + "0101")
+
+	def test_raising_start_numbering_from_later_still_takes_effect(self):
+		wheel_type = self.track_type(
+			make_wheel_type(
+				original_diameter=163, original_inner_diameter=60, original_diamond_height=16, start_numbering_from=1
+			)
+		)
+		prefix = get_factory_wheel_code_prefix(wheel_type.name)
+		make_wheel(wheel_type.name)  # consumes 0001
+
+		wheel_type.start_numbering_from = 900
+		wheel_type.save()
+
+		self.assertEqual(generate_factory_wheel_code(wheel_type.name), prefix + "0900")

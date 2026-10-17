@@ -186,6 +186,7 @@ doc_events = {
 	},
 	"Stock Entry": {
 		"before_validate": "wheel_tracker.stock_entry_hooks.assign_serial_numbers_for_wheel_receipt",
+		"validate": "wheel_tracker.stock_entry_hooks.validate_default_warehouse_requires_wheel_type",
 		"on_submit": "wheel_tracker.stock_entry_hooks.create_wheels_on_material_receipt",
 	},
 	"Stock Ledger Entry": {

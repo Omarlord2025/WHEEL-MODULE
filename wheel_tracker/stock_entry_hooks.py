@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from wheel_tracker.language_switch import _
 from frappe.utils import cint
 
 from wheel_tracker.serial_stock_utils import build_serial_bundle, get_row_or_sle_serial_nos
@@ -10,17 +11,60 @@ MATERIAL_RECEIPT = "Material Receipt"
 MATERIAL_ISSUE = "Material Issue"
 
 
+def get_default_warehouse() -> str | None:
+	return frappe.db.get_single_value("Wheel Tracker Settings", "default_warehouse")
+
+
+def row_is_inward_wheel_receipt(doc, row, default_warehouse: str | None) -> bool:
+	"""True for any Stock Entry row that should mint Wheels: a Material Receipt row
+	(any Warehouse, as it's always worked), or any *purely inward* row — t_warehouse
+	set, s_warehouse blank, e.g. a Repack/Manufacture output row — landing in Wheel
+	Tracker Settings' Default Warehouse specifically. Deliberately excludes a row that
+	also has an s_warehouse (a genuine Material Transfer leg): that row is moving
+	stock that must already have real serials — minting fresh ones there would create
+	Wheels with no corresponding outward movement anywhere, and ERPNext's own stock
+	ledger processing for a transfer row expects the *same* bundle on both legs, not a
+	freshly-minted Inward one."""
+	if doc.purpose == MATERIAL_RECEIPT:
+		return True
+	return bool(default_warehouse) and row.t_warehouse == default_warehouse and not row.s_warehouse
+
+
+def validate_default_warehouse_requires_wheel_type(doc, method=None):
+	"""Stock Entry validate hook: a row landing in Wheel Tracker Settings' Default
+	Warehouse must be for an Item that already has a Wheel Type — that Warehouse holds
+	real, spec'd wheels only, never an unclassified stock item. Other warehouses are
+	unaffected; Material Receipt into them keeps its existing silent-skip behavior."""
+	default_warehouse = get_default_warehouse()
+	if not default_warehouse:
+		return
+
+	item_codes = {row.item_code for row in doc.items if row.t_warehouse == default_warehouse}
+	if not item_codes:
+		return
+
+	wheel_type_by_item = get_wheel_types_by_item(item_codes)
+	for row in doc.items:
+		if row.t_warehouse == default_warehouse and row.item_code not in wheel_type_by_item:
+			frappe.throw(
+				_(
+					"Row {0}: Item {1} has no Wheel Type yet — create one before bringing it into {2}."
+				).format(row.idx, row.item_code, default_warehouse)
+			)
+
+
 def assign_serial_numbers_for_wheel_receipt(doc, method=None):
 	"""Stock Entry before_validate hook: auto-generate factory_wheel_codes and attach
 	them as a Serial and Batch Bundle before core validation requires serial numbers to
 	be present for a serialized Item — before_validate always runs before validate()
 	(frappe.model.document.Document's own _validate() ordering), so this beats core's
 	own mandatory-serial check. See PRD v10."""
-	if doc.purpose not in (MATERIAL_RECEIPT, MATERIAL_ISSUE):
+	if doc.purpose not in (MATERIAL_RECEIPT, MATERIAL_ISSUE) and not get_default_warehouse():
 		return
 
 	from wheel_tracker.wheel_tracker.doctype.wheel.wheel import generate_factory_wheel_code
 
+	default_warehouse = get_default_warehouse()
 	wheel_type_by_item = get_wheel_types_by_item({row.item_code for row in doc.items})
 
 	for row in doc.items:
@@ -30,7 +74,12 @@ def assign_serial_numbers_for_wheel_receipt(doc, method=None):
 		if not frappe.db.get_value("Item", row.item_code, "has_serial_no"):
 			continue  # defensive: an item Phase 3 couldn't serialize
 
-		if doc.purpose == MATERIAL_RECEIPT:
+		if doc.purpose == MATERIAL_ISSUE:  # the specific Wheel being retired, passed by the caller
+			target_serial = doc.flags.wheel_serial_no
+			if not target_serial:
+				continue
+			bundle = build_serial_bundle(row.item_code, row.s_warehouse, [target_serial], "Outward", doc.company)
+		elif row_is_inward_wheel_receipt(doc, row, default_warehouse):
 			# The opening-stock backfill patch reuses this hook to attach an existing
 			# Wheel's own factory_wheel_code (always a single-serial, qty=1 receipt)
 			# instead of minting a new one — everything else generates fresh codes.
@@ -40,27 +89,28 @@ def assign_serial_numbers_for_wheel_receipt(doc, method=None):
 			else:
 				codes = [generate_factory_wheel_code(wheel_type.name) for _ in range(cint(row.qty))]
 			bundle = build_serial_bundle(row.item_code, row.t_warehouse, codes, "Inward", doc.company)
-		else:  # Material Issue — the specific Wheel being retired, passed by the caller
-			target_serial = doc.flags.wheel_serial_no
-			if not target_serial:
-				continue
-			bundle = build_serial_bundle(row.item_code, row.s_warehouse, [target_serial], "Outward", doc.company)
+		else:
+			continue
 
 		row.serial_and_batch_bundle = bundle.name
 		row.use_serial_batch_fields = 0
 
 
 def create_wheels_on_material_receipt(doc, method=None):
-	"""Stock Entry on_submit hook: a Material Receipt against a Wheel Type's Item
-	auto-creates a matching Wheel per actual serial number received, In Stock.
-	Idempotent — skips serials that already have a Wheel (needed by the opening-stock
-	backfill patch, which reuses this same path)."""
-	if doc.purpose != MATERIAL_RECEIPT:
+	"""Stock Entry on_submit hook: an inward row against a Wheel Type's Item — a
+	Material Receipt anywhere (as it's always worked), or any Stock Entry row landing in
+	Wheel Tracker Settings' Default Warehouse — auto-creates a matching Wheel per actual
+	serial number received, In Stock. Idempotent — skips serials that already have a
+	Wheel (needed by the opening-stock backfill patch, which reuses this same path)."""
+	default_warehouse = get_default_warehouse()
+	if doc.purpose != MATERIAL_RECEIPT and not default_warehouse:
 		return
 
 	wheel_type_by_item = get_wheel_types_by_item({row.item_code for row in doc.items})
 
 	for row in doc.items:
+		if not row_is_inward_wheel_receipt(doc, row, default_warehouse):
+			continue
 		wheel_type = wheel_type_by_item.get(row.item_code)
 		if not wheel_type:
 			continue

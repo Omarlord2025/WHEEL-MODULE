@@ -8,8 +8,13 @@
   "send_email_alerts",
   "column_break_1",
   "usable_volume_floor_percent",
+  "section_break_stock",
+  "default_warehouse",
   "section_break_scrap",
   "scrap_sales_account",
+  "section_break_wear_cost",
+  "wheel_asset_account",
+  "wheel_wear_cost_account",
   "section_break_language",
   "language"
  ],
@@ -42,6 +47,18 @@
    "reqd": 1
   },
   {
+   "fieldname": "section_break_stock",
+   "fieldtype": "Section Break",
+   "label": "Stock"
+  },
+  {
+   "description": "Every Wheel this module creates or auto-detects from stock lives in this Warehouse. A Stock Entry bringing a Wheel Type's Item into this Warehouse is blocked unless that Item already has a Wheel Type — nothing enters this Warehouse without a real spec behind it.",
+   "fieldname": "default_warehouse",
+   "fieldtype": "Link",
+   "label": "Default Warehouse",
+   "options": "Warehouse"
+  },
+  {
    "fieldname": "section_break_scrap",
    "fieldtype": "Section Break",
    "label": "Scrap Sales"
@@ -51,6 +68,25 @@
    "fieldname": "scrap_sales_account",
    "fieldtype": "Link",
    "label": "Scrap Sales Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "section_break_wear_cost",
+   "fieldtype": "Section Break",
+   "label": "Wear Cost"
+  },
+  {
+   "description": "Asset/inventory account credited for the wear-cost value leaving a Wheel as it's used — the other side of the Wear Cost Account below. Left blank, Measurement Event's wear-cost Journal Entry is skipped (not blocked) rather than posted to the wrong account.",
+   "fieldname": "wheel_asset_account",
+   "fieldtype": "Link",
+   "label": "Wheel Asset Account",
+   "options": "Account"
+  },
+  {
+   "description": "Expense account debited for a Wheel's wear cost on every submitted Measurement Event (the EGP value of material worn away since the last reading). Left blank, the wear-cost Journal Entry is skipped (not blocked) rather than posted to the wrong account.",
+   "fieldname": "wheel_wear_cost_account",
+   "fieldtype": "Link",
+   "label": "Wheel Wear Cost Account",
    "options": "Account"
   },
   {

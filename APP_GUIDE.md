@@ -32,6 +32,19 @@ Entry against the Wheel Type's Item, same as any other stock item. You don't nee
 create Wheel records by hand — submitting that Stock Entry automatically creates one
 Wheel per unit received, In Stock, with a Factory Wheel Code already assigned.
 
+If **Wheel Tracker Settings → Default Warehouse** is set, any stock entry landing
+there — not just a Material Receipt — is held to the same rule: the Item must already
+have a Wheel Type, or the transaction is blocked with a clear error. It's a way to keep
+that one Warehouse as "real wheels only," nothing unclassified. Every other Warehouse
+is unaffected.
+
+Each Wheel Type has its own **Start Numbering From** (under Cost & Stock) controlling
+where its auto-generated Factory Wheel Codes begin counting — raise it any time and the
+next generated code picks up from there. You can also type your own Factory Wheel Code
+by hand instead of leaving it to auto-generate; if it happens to match that Wheel
+Type's own numbering pattern, the auto-counter picks up after it so there's never a
+collision later.
+
 ## 4. Bringing In Wheels Already In Stock
 
 If wheels for a Wheel Type physically already exist in stock but were never received
@@ -59,6 +72,11 @@ job — no separate step needed.
 Create a new Measurement Event, pick the Wheel, and enter its current caliper readings
 (diameter, and for profiled wheels, inner diameter and layer height). Submitting it
 calculates the wear and cost automatically and updates the Wheel.
+
+If **Wheel Tracker Settings → Wheel Asset Account** and **Wheel Wear Cost Account** are
+both set, submitting also posts a real Journal Entry for that measurement's wear cost —
+debiting the Wear Cost Account, crediting the Asset Account. Leave either blank and this
+is simply skipped; nothing about logging wear itself is blocked either way.
 
 ### 6.2 Several Wheels at Once — the Batch Measurement Entry Page
 

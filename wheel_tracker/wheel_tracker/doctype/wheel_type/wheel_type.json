@@ -39,6 +39,7 @@
   "column_break_cost",
   "reorder_point",
   "reorder_qty",
+  "start_numbering_from",
   "section_break_spec",
   "grit",
   "concentration",
@@ -285,6 +286,14 @@
    "fieldname": "reorder_qty",
    "fieldtype": "Int",
    "label": "Reorder Quantity"
+  },
+  {
+   "default": "1",
+   "description": "The next auto-generated Factory Wheel Code for this Wheel Type's shape/dimensions starts counting from here. Raising it later takes effect immediately; it never lowers an already-higher running number, so it's always safe to change.",
+   "fieldname": "start_numbering_from",
+   "fieldtype": "Int",
+   "label": "Start Numbering From",
+   "reqd": 1
   },
   {
    "collapsible": 1,

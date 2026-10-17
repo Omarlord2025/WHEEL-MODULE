@@ -32,6 +32,7 @@
   "section_break_cost",
   "cost_per_mm3",
   "job_cost",
+  "journal_entry",
   "triggered_retirement",
   "auto_retirement",
   "amended_from"
@@ -140,8 +141,7 @@
    "fieldtype": "Float",
    "label": "Confirmed Volume (mm\u00b3)",
    "precision": "3",
-   "read_only": 1,
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "section_break_wear",
@@ -215,6 +215,14 @@
    "fieldname": "job_cost",
    "fieldtype": "Currency",
    "label": "Job Cost",
+   "read_only": 1
+  },
+  {
+   "description": "Journal Entry posting this event's Job Cost \u2014 debits Wheel Tracker Settings' Wheel Wear Cost Account, credits its Wheel Asset Account. Skipped (stays blank) if either account isn't configured, or Job Cost is zero. Cancelled with this event.",
+   "fieldname": "journal_entry",
+   "fieldtype": "Link",
+   "label": "Journal Entry",
+   "options": "Journal Entry",
    "read_only": 1
   },
   {

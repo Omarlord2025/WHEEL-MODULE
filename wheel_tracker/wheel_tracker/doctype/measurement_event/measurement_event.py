@@ -144,11 +144,53 @@ class MeasurementEvent(Document):
 		self.apply_to_wheel()
 		self.create_auto_retirement()
 		self.update_job_card_rollup()
+		self.create_wear_cost_journal_entry()
 
 	def on_cancel(self):
 		self.cancel_auto_retirement()
 		self.revert_from_wheel()
 		self.update_job_card_rollup()
+		self.cancel_wear_cost_journal_entry()
+
+	def create_wear_cost_journal_entry(self):
+		"""Posts this event's Job Cost as a real Journal Entry — debiting Wheel Tracker
+		Settings' Wheel Wear Cost Account, crediting its Wheel Asset Account — so wear
+		shows up in the real General Ledger as it happens, not just as a Wheel Tracker
+		field (PRD v10's own principle). Deliberately quiet, not a blocking validation:
+		skipped if either account isn't configured yet, if Job Cost is zero (e.g. a
+		re-measurement with no new wear), or if the Wheel has no Warehouse (so there's no
+		Company to post against) — none of those should ever stop a measurement from
+		saving, only decide whether the accounting side-effect happens alongside it."""
+		if flt(self.job_cost) <= 0:
+			return
+
+		wear_cost_account = frappe.db.get_single_value("Wheel Tracker Settings", "wheel_wear_cost_account")
+		asset_account = frappe.db.get_single_value("Wheel Tracker Settings", "wheel_asset_account")
+		if not wear_cost_account or not asset_account:
+			return
+
+		warehouse = frappe.db.get_value("Wheel", self.wheel, "warehouse")
+		company = frappe.db.get_value("Warehouse", warehouse, "company") if warehouse else None
+		if not company:
+			return
+
+		je = frappe.new_doc("Journal Entry")
+		je.voucher_type = "Journal Entry"
+		je.company = company
+		je.posting_date = self.measurement_date
+		je.user_remark = _("Wear cost — {0} on Wheel {1}").format(self.name, self.wheel)
+		je.append("accounts", {"account": wear_cost_account, "debit_in_account_currency": self.job_cost})
+		je.append("accounts", {"account": asset_account, "credit_in_account_currency": self.job_cost})
+		je.insert(ignore_permissions=True)
+		je.submit()
+
+		self.db_set("journal_entry", je.name)
+
+	def cancel_wear_cost_journal_entry(self):
+		if self.journal_entry and frappe.db.exists("Journal Entry", self.journal_entry):
+			je = frappe.get_doc("Journal Entry", self.journal_entry)
+			if je.docstatus == 1:
+				je.cancel()
 
 	def create_auto_retirement(self):
 		"""If apply_to_wheel() just auto-retired the Wheel (see Wheel.check_auto_retirement),

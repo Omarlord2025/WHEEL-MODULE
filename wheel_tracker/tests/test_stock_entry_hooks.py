@@ -4,7 +4,7 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from wheel_tracker.test_helpers import cleanup_wheel_tracker_records, make_wheel_type
+from wheel_tracker.test_helpers import cleanup_wheel_tracker_records, make_item, make_wheel_type
 
 
 class TestStockEntryHooks(FrappeTestCase):
@@ -116,10 +116,102 @@ class TestStockEntryHooks(FrappeTestCase):
 	def test_unrelated_item_is_ignored(self):
 		from erpnext.stock.doctype.stock_entry.stock_entry_utils import make_stock_entry
 
+		plain_item = make_item()
 		make_stock_entry(
-			item_code="_Test Item",
+			item_code=plain_item,
 			qty=5,
 			to_warehouse="_Test Warehouse - _TC",
 			purpose="Material Receipt",
 		)
 		self.assertEqual(frappe.db.count("Wheel", {"wheel_type": self.wheel_type.name}), 0)
+
+
+DEFAULT_WAREHOUSE = "_Test Warehouse 1 - _TC"
+
+
+class TestDefaultWarehouse(FrappeTestCase):
+	def setUp(self):
+		self._created = []
+		self._original_default_warehouse = frappe.db.get_single_value(
+			"Wheel Tracker Settings", "default_warehouse"
+		)
+		frappe.db.set_single_value("Wheel Tracker Settings", "default_warehouse", DEFAULT_WAREHOUSE)
+		self.wheel_type = self.track(
+			make_wheel_type(original_diameter=200, original_inner_diameter=60, original_diamond_height=20)
+		)
+
+	def tearDown(self):
+		cleanup_wheel_tracker_records(self._created)
+		frappe.db.set_single_value(
+			"Wheel Tracker Settings", "default_warehouse", self._original_default_warehouse
+		)
+
+	def track(self, doc):
+		self._created.append(doc.name)
+		return doc
+
+	def test_blocks_an_item_with_no_wheel_type_entering_the_default_warehouse(self):
+		from erpnext.stock.doctype.stock_entry.stock_entry_utils import make_stock_entry
+
+		plain_item = make_item()
+		self.assertRaises(
+			frappe.ValidationError,
+			make_stock_entry,
+			item_code=plain_item,
+			qty=1,
+			to_warehouse=DEFAULT_WAREHOUSE,
+			purpose="Material Receipt",
+		)
+
+	def test_does_not_block_the_same_item_entering_a_different_warehouse(self):
+		from erpnext.stock.doctype.stock_entry.stock_entry_utils import make_stock_entry
+
+		make_stock_entry(
+			item_code=self.wheel_type.item, qty=1, to_warehouse="_Test Warehouse - _TC", purpose="Material Receipt"
+		)
+		self.assertEqual(frappe.db.count("Wheel", {"wheel_type": self.wheel_type.name}), 1)
+
+	def test_allows_and_creates_wheels_for_an_item_that_has_a_wheel_type(self):
+		from erpnext.stock.doctype.stock_entry.stock_entry_utils import make_stock_entry
+
+		make_stock_entry(
+			item_code=self.wheel_type.item, qty=2, to_warehouse=DEFAULT_WAREHOUSE, purpose="Material Receipt"
+		)
+		self.assertEqual(frappe.db.count("Wheel", {"wheel_type": self.wheel_type.name}), 2)
+
+	def test_non_material_receipt_entering_default_warehouse_also_mints_wheels(self):
+		"""The Default Warehouse rule applies to any purely-inward row, not just a
+		Material Receipt purpose — a Repack row producing a Wheel Type's Item straight
+		into the Default Warehouse mints new Wheels the same way, beating core's
+		mandatory-serial check exactly like a receipt does. (A Material Transfer row
+		doesn't qualify — see row_is_inward_wheel_receipt's own docstring: a transfer
+		leg must already carry real serials, it can't mint fresh ones.)"""
+		from erpnext.stock.doctype.stock_entry.stock_entry_utils import make_stock_entry
+
+		raw_item = make_item()
+		make_stock_entry(item_code=raw_item, qty=1, to_warehouse="_Test Warehouse - _TC", purpose="Material Receipt")
+
+		se = frappe.get_doc(
+			{
+				"doctype": "Stock Entry",
+				"purpose": "Repack",
+				"stock_entry_type": "Repack",
+				"company": "_Test Company",
+				"items": [
+					{"item_code": raw_item, "s_warehouse": "_Test Warehouse - _TC", "qty": 1},
+					{"item_code": self.wheel_type.item, "t_warehouse": DEFAULT_WAREHOUSE, "qty": 1},
+				],
+			}
+		)
+		se.insert(ignore_permissions=True)
+		se.submit()
+
+		self.assertEqual(frappe.db.count("Wheel", {"wheel_type": self.wheel_type.name}), 1)
+
+	def test_blank_default_warehouse_disables_all_of_this(self):
+		frappe.db.set_single_value("Wheel Tracker Settings", "default_warehouse", None)
+		from erpnext.stock.doctype.stock_entry.stock_entry_utils import make_stock_entry
+
+		# No longer blocked, and Material Receipt into any warehouse keeps working as before.
+		plain_item = make_item()
+		make_stock_entry(item_code=plain_item, qty=1, to_warehouse=DEFAULT_WAREHOUSE, purpose="Material Receipt")

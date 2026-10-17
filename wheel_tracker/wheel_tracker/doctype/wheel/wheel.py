@@ -5,7 +5,7 @@ import frappe
 from wheel_tracker.language_switch import _
 from frappe.model.document import Document
 from frappe.model.naming import make_autoname
-from frappe.utils import flt, today
+from frappe.utils import cint, flt, today
 
 from wheel_tracker.wheel_tracker.doctype.wheel_tracker_settings.wheel_tracker_settings import (
 	get_usable_volume_fraction,
@@ -20,6 +20,8 @@ class Wheel(Document):
 	def autoname(self):
 		if not self.factory_wheel_code:
 			self.factory_wheel_code = generate_factory_wheel_code(self.wheel_type)
+		else:
+			sync_series_with_manual_code(self.wheel_type, self.factory_wheel_code)
 		self.name = self.factory_wheel_code
 
 	def validate(self):
@@ -61,6 +63,21 @@ class Wheel(Document):
 			self.current_job_card = None
 
 
+def get_factory_wheel_code_prefix(wheel_type_name: str) -> str:
+	"""The SH-<material>-<shape>-<dia>-T<height>- part shared by every auto-generated
+	Factory Wheel Code for a Wheel Type — also the Series key its running number lives
+	under, so every Wheel Type sharing the same shape/dimensions naturally shares one
+	counter (matches how physically-identical wheels were already numbered together)."""
+	wheel_type = frappe.get_cached_doc("Wheel Type", wheel_type_name)
+	material_code = frappe.db.get_value("Wheel Material", wheel_type.material, "factory_code_letter") or "X"
+	return "SH-{0}-{1}-{2}-T{3}-".format(
+		material_code,
+		wheel_type.shape,
+		int(flt(wheel_type.original_diameter)),
+		int(flt(wheel_type.original_diamond_height)),
+	)
+
+
 def generate_factory_wheel_code(wheel_type_name: str) -> str:
 	"""Auto-generate a Factory Wheel Code matching the legacy SH-<material>-<shape>-<dia>-T<height>-#### pattern.
 
@@ -68,16 +85,41 @@ def generate_factory_wheel_code(wheel_type_name: str) -> str:
 	B for CBN/borazon-grit — the real codes use B, not the more obvious-looking C).
 	The SH- prefix is this app's own convention: the legacy sheet splits roughly evenly
 	between SH- and SL- with no discernible pattern, so there's no clear alternative to prefer.
-	"""
+
+	Floors the running number at Wheel Type.start_numbering_from before generating, so a
+	freshly-raised starting point takes effect on the very next Wheel — never lowers an
+	already-higher counter, so this is always safe to call."""
 	wheel_type = frappe.get_cached_doc("Wheel Type", wheel_type_name)
-	material_code = frappe.db.get_value("Wheel Material", wheel_type.material, "factory_code_letter") or "X"
-	prefix = "SH-{0}-{1}-{2}-T{3}-".format(
-		material_code,
-		wheel_type.shape,
-		int(flt(wheel_type.original_diameter)),
-		int(flt(wheel_type.original_diamond_height)),
-	)
+	prefix = get_factory_wheel_code_prefix(wheel_type_name)
+	ensure_series_at_least(prefix, cint(wheel_type.start_numbering_from) - 1)
 	return make_autoname(prefix + ".####")
+
+
+def sync_series_with_manual_code(wheel_type_name: str, factory_wheel_code: str):
+	"""If a manually-typed Factory Wheel Code matches this Wheel Type's own auto-numbering
+	prefix, bump that prefix's counter to match — so the next auto-generated code
+	continues on from the override instead of eventually colliding with it."""
+	prefix = get_factory_wheel_code_prefix(wheel_type_name)
+	if not factory_wheel_code.startswith(prefix):
+		return
+	suffix = factory_wheel_code[len(prefix) :]
+	if suffix.isdigit():
+		ensure_series_at_least(prefix, cint(suffix))
+
+
+def ensure_series_at_least(prefix: str, value: int):
+	"""Raises (never lowers) the Frappe naming Series counter for `prefix` to `value`, so
+	the next make_autoname(prefix + ".####") call returns value + 1 or higher. Raw SQL
+	throughout — `tabSeries` is a minimal internal table (just name/current, no
+	owner/creation/modified), and frappe.db.get_value/set_value both default to an
+	`order by modified` that table doesn't have a column for."""
+	if value <= 0:
+		return
+	row = frappe.db.sql("select current from `tabSeries` where name = %s", (prefix,))
+	if not row:
+		frappe.db.sql("insert into `tabSeries` (name, current) values (%s, %s)", (prefix, value))
+	elif cint(row[0][0]) < value:
+		frappe.db.sql("update `tabSeries` set current = %s where name = %s", (value, prefix))
 
 
 @frappe.whitelist()
