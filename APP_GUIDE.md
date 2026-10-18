@@ -11,11 +11,16 @@ Every diamond/CBN resharpening wheel in the shop, from the moment it's received 
 it's fully worn out or damaged. It tracks how much of a wheel's abrasive material has
 been used, what that wear cost, and which jobs it was used on.
 
-## 2. The Five Things You'll See in Desk
+## 2. The Doctypes You'll See in Desk
+
+A wheel's core lifecycle runs through five of these:
 
 - **Wheel** — one physical wheel, identified by its Factory Wheel Code. Its status is
   always one of In Stock, In Use, or Retired.
-- **Wheel Type** — the spec a Wheel belongs to (shape, material, size, cost).
+- **Wheel Type** — the spec a Wheel belongs to (shape, material, size, cost). Shows its
+  linked **Item**'s real name (**Item Name**) alongside the Item code — in the Wheel
+  Type list and in Wheel Retrieval's table — so you're reading actual names, not bare
+  codes.
 - **Job Card's "Wheels Used"** — the list of Wheels assigned to a specific job.
 - **Measurement Event** — a caliper reading logged against a Wheel, showing how much
   wear happened since the last reading.
@@ -24,6 +29,12 @@ been used, what that wear cost, and which jobs it was used on.
 Every one of these shows a reference photo of the wheel's shape (1A1, 1V1, 11V9, 12V9,
 or P-series) right on the form and in its list view — set once on **Wheel Shape**, it
 carries through automatically wherever that shape shows up.
+
+Beyond the core lifecycle, three more doctypes round out the module — each covered in
+its own section below: **Wheel Retrieval** (Section 4, bringing in stock that already
+exists), **Wheel Scrap Sale** (Section 9, selling scrap off a Retired wheel), and
+**Wheel Tracker Settings** (referenced throughout — the one place every module-wide
+setting lives: Default Warehouse, accounts, reorder rules, and the language switch).
 
 ## 3. Receiving New Wheels
 
@@ -159,6 +170,18 @@ are tracked as simply usable/not-usable instead. Use Wheel Retirement for those.
 **"Why isn't this Item showing up in Wheel Retrieval?"**
 It needs a Wheel Type first — Wheel Retrieval works off Wheel Types, not raw Items, so
 a freshly-created Item with no Wheel Type yet simply won't appear.
+
+**"Why didn't my Measurement Event post a Journal Entry?"**
+Either **Wheel Tracker Settings → Wheel Asset Account** or **Wheel Wear Cost Account**
+is blank (both have to be set), the Wheel has no **Warehouse** (there's no Company to
+post against), or this particular reading had zero new wear since the last one — none
+of these are errors, the measurement still saves and the Wheel still updates normally,
+it just has nothing to post.
+
+**"Why was my Stock Entry blocked?"**
+A row is landing in **Wheel Tracker Settings → Default Warehouse** for an Item that has
+no Wheel Type yet — that Warehouse only accepts Items with a real spec behind them.
+Create the Wheel Type first, or receive into a different Warehouse.
 
 ## 13. Switching Between English and Arabic
 
